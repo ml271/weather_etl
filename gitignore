@@ -1,0 +1,32 @@
+# Umgebungsvariablen – NIEMALS committen!
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Airflow
+airflow/logs/
+airflow/plugins/__pycache__/
+
+# Docker Volumes (lokal)
+postgres-data/
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# macOS
+.DS_Store

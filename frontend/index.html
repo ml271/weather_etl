@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Station – ETL Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ░░ BACKGROUND GRID ░░ -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+
+  <!-- ░░ HEADER ░░ -->
+  <header class="header">
+    <div class="header-left">
+      <span class="station-label">WEATHER STATION</span>
+      <h1 class="city-name" id="cityName">— —</h1>
+    </div>
+    <div class="header-right">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="last-updated" id="lastUpdated">Verbinde...</span>
+    </div>
+  </header>
+
+  <!-- ░░ ALERT BANNER ░░ -->
+  <div class="alert-banner" id="alertBanner" style="display:none"></div>
+
+  <!-- ░░ MAIN GRID ░░ -->
+  <main class="dashboard-grid">
+
+    <!-- Current conditions -->
+    <section class="card card--hero" id="cardToday">
+      <div class="card-label">HEUTE</div>
+      <div class="hero-content">
+        <div class="weather-icon-big" id="heroIcon">—</div>
+        <div class="hero-temps">
+          <span class="temp-max" id="heroTempMax">—°</span>
+          <span class="temp-sep">/</span>
+          <span class="temp-min" id="heroTempMin">—°</span>
+        </div>
+        <div class="hero-desc" id="heroDesc">Lade Daten...</div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-label">REGEN</span><span class="stat-val" id="heroRain">—</span></div>
+        <div class="stat"><span class="stat-label">WIND</span><span class="stat-val" id="heroWind">—</span></div>
+        <div class="stat"><span class="stat-label">UV</span><span class="stat-val" id="heroUV">—</span></div>
+        <div class="stat"><span class="stat-label">SCHNEE</span><span class="stat-val" id="heroSnow">—</span></div>
+      </div>
+    </section>
+
+    <!-- Active Alerts -->
+    <section class="card card--alerts">
+      <div class="card-label">AKTIVE WARNUNGEN <span class="alert-count" id="alertCount">0</span></div>
+      <div class="alerts-list" id="alertsList">
+        <div class="no-alerts">Keine aktiven Warnungen ✓</div>
+      </div>
+    </section>
+
+    <!-- 7-day forecast -->
+    <section class="card card--forecast">
+      <div class="card-label">7-TAGE PROGNOSE</div>
+      <div class="forecast-row" id="forecastRow">
+        <div class="forecast-loading">Lade...</div>
+      </div>
+    </section>
+
+    <!-- Temperature Chart -->
+    <section class="card card--chart">
+      <div class="card-label">TEMPERATURVERLAUF <span class="chart-toggle">
+        <button class="toggle-btn active" data-chart="daily" onclick="switchChart('daily')">7 Tage</button>
+        <button class="toggle-btn" data-chart="hourly" onclick="switchChart('hourly')">48h</button>
+      </span></div>
+      <div class="chart-wrapper">
+        <canvas id="tempChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Precipitation Chart -->
+    <section class="card card--precip">
+      <div class="card-label">NIEDERSCHLAG (mm)</div>
+      <div class="chart-wrapper">
+        <canvas id="precipChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Sunrise/Sunset -->
+    <section class="card card--sun">
+      <div class="card-label">SONNE</div>
+      <div class="sun-content" id="sunContent">
+        <div class="sun-item">
+          <span class="sun-icon">🌅</span>
+          <span class="sun-label">Aufgang</span>
+          <span class="sun-time" id="sunrise">—:——</span>
+        </div>
+        <div class="sun-arc" id="sunArc">
+          <svg viewBox="0 0 200 110" class="arc-svg">
+            <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="rgba(255,200,50,0.15)" stroke-width="3"/>
+            <path id="arcProgress" d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="#FFD950" stroke-width="3" stroke-dasharray="283" stroke-dashoffset="283"/>
+            <circle id="sunDot" cx="10" cy="100" r="6" fill="#FFD950"/>
+          </svg>
+        </div>
+        <div class="sun-item">
+          <span class="sun-icon">🌇</span>
+          <span class="sun-label">Untergang</span>
+          <span class="sun-time" id="sunset">—:——</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

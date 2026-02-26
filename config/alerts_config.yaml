@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────────────
+# Weather Alert Configuration
+# Passe diese Werte an deine Bedürfnisse an!
+# ─────────────────────────────────────────────────────────────────
+
+alerts:
+
+  - name: "Extreme Hitze"
+    enabled: true
+    severity: danger
+    message: "Extreme Hitze erwartet! Bitte viel trinken und die Sonne meiden."
+    conditions:
+      temperature_max:
+        operator: ">"
+        value: 35    # °C
+
+  - name: "Starkregen"
+    enabled: true
+    severity: warning
+    message: "Starkregen erwartet! Überflutungen möglich – bitte Keller sichern."
+    conditions:
+      precipitation_sum:
+        operator: ">"
+        value: 20    # mm pro Tag
+
+  - name: "Schneefall"
+    enabled: true
+    severity: info
+    message: "Schneefall erwartet! Glättegefahr – bitte vorsichtig fahren."
+    conditions:
+      snowfall_sum:
+        operator: ">"
+        value: 5     # cm pro Tag
+
+  - name: "Sturm"
+    enabled: true
+    severity: danger
+    message: "Sturmwarnung! Windböen über 80 km/h erwartet."
+    conditions:
+      wind_gusts_max:
+        operator: ">"
+        value: 80    # km/h
+
+  - name: "Frost"
+    enabled: true
+    severity: warning
+    message: "Frostgefahr! Temperaturen unter dem Gefrierpunkt erwartet."
+    conditions:
+      temperature_min:
+        operator: "<"
+        value: 0     # °C
+
+  - name: "UV-Warnung"
+    enabled: true
+    severity: warning
+    message: "Hoher UV-Index! Sonnenschutz dringend empfohlen."
+    conditions:
+      uv_index_max:
+        operator: ">="
+        value: 8
+
+  - name: "Hitzewelle"
+    enabled: true
+    severity: warning
+    message: "Wärme erwartet – gute Bedingungen für Outdoor-Aktivitäten mit Vorsicht."
+    conditions:
+      temperature_max:
+        operator: ">="
+        value: 30    # °C
