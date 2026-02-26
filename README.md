@@ -82,3 +82,7 @@ alerts:
 # Oder via CLI:
 docker exec weather_airflow_scheduler airflow dags trigger weather_etl_pipeline
 ```
+## 26.02.2026 13:30 
+# arbeitszeit 2.5 h
+# test_pipeline.py läuft ohne Fehler durch
+# airflow ui ist erreichbar und frontend ist ist sichtbar
