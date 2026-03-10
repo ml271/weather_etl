@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS weather_hourly (
     wind_speed          DECIMAL(6, 2),    -- km/h
     wind_direction      INTEGER,          -- degrees
     humidity            INTEGER,          -- %
+    sunshine_duration   DECIMAL(6,2),    -- seconds per hour
     weather_code        INTEGER,          -- WMO code
     is_day              BOOLEAN,
     created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

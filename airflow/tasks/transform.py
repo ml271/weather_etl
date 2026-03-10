@@ -114,9 +114,10 @@ def transform_hourly(city: str, hourly: dict) -> list[dict]:
             "snowfall":       safe_get(hourly.get("snowfall"), i, 0.0),
             "wind_speed":     safe_get(hourly.get("wind_speed_10m"), i),
             "wind_direction": safe_get(hourly.get("wind_direction_10m"), i),
-            "humidity":       safe_get(hourly.get("relative_humidity_2m"), i),
-            "weather_code":   safe_get(hourly.get("weather_code"), i),
-            "is_day":         bool(safe_get(hourly.get("is_day"), i, 1)),
+            "humidity":           safe_get(hourly.get("relative_humidity_2m"), i),
+            "sunshine_duration":  safe_get(hourly.get("sunshine_duration"), i, 0.0),
+            "weather_code":       safe_get(hourly.get("weather_code"), i),
+            "is_day":             bool(safe_get(hourly.get("is_day"), i, 1)),
         }
         records.append(record)
 

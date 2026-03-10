@@ -34,6 +34,7 @@ HOURLY_VARIABLES = [
     "wind_speed_10m",
     "wind_direction_10m",
     "relative_humidity_2m",
+    "sunshine_duration",
     "weather_code",
     "is_day",
 ]

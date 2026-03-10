@@ -1,6 +1,5 @@
 /**
  * Weather Station Dashboard
- * Holt Daten von der FastAPI und rendert Charts + Alerts
  */
 
 const API = "/api";   // Nginx proxy → backend:8000
@@ -19,9 +18,7 @@ const WMO_ICONS = {
 const SEVERITY_ICONS = { danger:"🚨", warning:"⚠️", info:"ℹ️" };
 const WEEKDAYS = ["SO","MO","DI","MI","DO","FR","SA"];
 
-let tempChart   = null;
-let precipChart = null;
-let currentChartMode = "daily";
+let currentPlotHours = 96;
 
 // ─────────────────────────────────────────────────────
 // Utilities
@@ -41,53 +38,14 @@ function getIcon(code) {
   return WMO_ICONS[code] ?? "🌡️";
 }
 
-function parseTime(str) {
-  return str ? new Date(str) : null;
-}
-
-function fmtTime(dt) {
-  if (!dt) return "—";
-  return dt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+function fmtDate(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
 }
 
 // ─────────────────────────────────────────────────────
-// Chart defaults
-// ─────────────────────────────────────────────────────
-
-Chart.defaults.color = "#4a6080";
-Chart.defaults.font.family = "'Space Mono', monospace";
-Chart.defaults.font.size = 10;
-
-const chartBase = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: true, position: "top",
-      labels: { boxWidth: 10, padding: 14, color: "#4a6080" }
-    },
-    tooltip: {
-      backgroundColor: "#0d1520",
-      borderColor: "rgba(74,158,255,0.3)",
-      borderWidth: 1,
-      titleColor: "#c8d8f0",
-      bodyColor: "#4a6080",
-      padding: 10,
-    },
-  },
-  scales: {
-    x: {
-      grid: { color: "rgba(74,158,255,0.05)" },
-      ticks: { color: "#2a3a52", maxRotation: 0 },
-    },
-    y: {
-      grid: { color: "rgba(74,158,255,0.05)" },
-      ticks: { color: "#2a3a52" },
-    },
-  },
-};
-
-// ─────────────────────────────────────────────────────
-// Render: Summary / Hero card
+// Render: Summary
 // ─────────────────────────────────────────────────────
 
 function renderSummary(data) {
@@ -100,26 +58,18 @@ function renderSummary(data) {
   const dot = document.getElementById("statusDot");
   dot.className = "status-dot " + (data.today ? "online" : "error");
 
-  if (data.today) {
-    const t = data.today;
-    document.getElementById("heroIcon").textContent    = getIcon(t.weather_code);
-    document.getElementById("heroTempMax").textContent = fmt(t.temperature_max, "°");
-    document.getElementById("heroTempMin").textContent = fmt(t.temperature_min, "°");
-    document.getElementById("heroDesc").textContent    = t.weather_description ?? "—";
-    document.getElementById("heroRain").textContent    = fmt(t.precipitation_sum, " mm");
-    document.getElementById("heroWind").textContent    = fmtInt(t.wind_speed_max, " km/h");
-    document.getElementById("heroUV").textContent      = fmt(t.uv_index_max, "");
-    document.getElementById("heroSnow").textContent    = fmt(t.snowfall_sum, " cm");
-
-    // Sunrise / Sunset
-    const rise = parseTime(t.sunrise);
-    const set  = parseTime(t.sunset);
-    document.getElementById("sunrise").textContent = fmtTime(rise);
-    document.getElementById("sunset").textContent  = fmtTime(set);
-    animateSunArc(rise, set);
-  }
-
   renderAlerts(data.active_alerts ?? []);
+}
+
+// ─────────────────────────────────────────────────────
+// Render: Forecast date range in header
+// ─────────────────────────────────────────────────────
+
+function updateForecastRange() {
+  const now = new Date();
+  const end = new Date(now.getTime() + currentPlotHours * 3600 * 1000);
+  const fmt2 = d => d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
+  document.getElementById("forecastRange").textContent = `${fmt2(now)} – ${fmt2(end)}`;
 }
 
 // ─────────────────────────────────────────────────────
@@ -141,7 +91,6 @@ function renderAlerts(alerts) {
     return;
   }
 
-  // Show danger banner at top
   const dangers = alerts.filter(a => a.severity === "danger");
   if (dangers.length > 0) {
     banner.style.display = "block";
@@ -177,7 +126,7 @@ function renderForecast(records) {
     const rain    = parseFloat(r.precipitation_sum) || 0;
 
     return `
-      <div class="forecast-day ${isToday ? "today" : ""}">
+      <div class="forecast-day ${isToday ? "today" : ""}" onclick="openDayModal('${r.forecast_date}')">
         <span class="f-weekday">${isToday ? "HEUTE" : weekday}</span>
         <span class="f-icon">${getIcon(r.weather_code)}</span>
         <span class="f-max">${fmt(r.temperature_max, "°")}</span>
@@ -186,132 +135,74 @@ function renderForecast(records) {
       </div>
     `;
   }).join("");
+
 }
 
 // ─────────────────────────────────────────────────────
-// Charts
+// Day Detail Modal
 // ─────────────────────────────────────────────────────
 
-function buildTempChart(data) {
-  const ctx = document.getElementById("tempChart").getContext("2d");
-  if (tempChart) tempChart.destroy();
+window.openDayModal = function(dateStr) {
+  const modal   = document.getElementById("dayModal");
+  const img     = document.getElementById("modalPlotImg");
+  const loading = document.getElementById("modalLoading");
+  const title   = document.getElementById("modalTitle");
 
-  tempChart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: data.labels,
-      datasets: [
-        {
-          label: "Max °C",
-          data: data.datasets.temperature_max,
-          borderColor: "#ff9d4a",
-          backgroundColor: "rgba(255,157,74,0.08)",
-          tension: 0.4, fill: true, pointRadius: 4, pointBackgroundColor: "#ff9d4a",
-        },
-        {
-          label: "Min °C",
-          data: data.datasets.temperature_min,
-          borderColor: "#4ad4ff",
-          backgroundColor: "rgba(74,212,255,0.08)",
-          tension: 0.4, fill: true, pointRadius: 4, pointBackgroundColor: "#4ad4ff",
-        },
-      ],
-    },
-    options: { ...chartBase },
+  const d  = new Date(dateStr + "T12:00:00");
+  const dayNames = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+  title.textContent = `${dayNames[d.getDay()].toUpperCase()}  ·  ${d.toLocaleDateString("de-DE", { day:"2-digit", month:"long", year:"numeric" })}`;
+
+  img.classList.remove("loaded");
+  img.src = "";
+  loading.style.display = "block";
+  loading.textContent = "Lade Stundendaten...";
+  modal.classList.add("open");
+  document.body.style.overflow = "hidden";
+
+  img.onload  = () => { loading.style.display = "none"; img.classList.add("loaded"); };
+  img.onerror = () => { loading.textContent = "Keine Stundendaten für diesen Tag."; };
+  img.src = `${API}/charts/day-detail?date=${dateStr}&_t=${Date.now()}`;
+};
+
+window.closeDayModal = function() {
+  document.getElementById("dayModal").classList.remove("open");
+  document.body.style.overflow = "";
+};
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeDayModal();
+});
+
+// ─────────────────────────────────────────────────────
+// Hourly Plot Image
+// ─────────────────────────────────────────────────────
+
+function loadHourlyPlot(hours) {
+  const img     = document.getElementById("hourlyPlotImg");
+  const loading = document.getElementById("hourlyPlotLoading");
+
+  img.classList.remove("loaded");
+  loading.style.display = "block";
+
+  const url = `${API}/charts/hourly-plot?hours=${hours}&_t=${Date.now()}`;
+
+  img.onload = () => {
+    loading.style.display = "none";
+    img.classList.add("loaded");
+  };
+  img.onerror = () => {
+    loading.textContent = "Keine Daten – ETL-Job ausführen!";
+  };
+  img.src = url;
+}
+
+window.switchPlotHours = function(hours) {
+  currentPlotHours = hours;
+  document.querySelectorAll(".plot-hours .toggle-btn").forEach(btn => {
+    btn.classList.toggle("active", parseInt(btn.dataset.hours) === hours);
   });
-}
-
-function buildHourlyChart(data) {
-  const ctx = document.getElementById("tempChart").getContext("2d");
-  if (tempChart) tempChart.destroy();
-
-  tempChart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: data.labels,
-      datasets: [
-        {
-          label: "Temperatur °C",
-          data: data.temperature,
-          borderColor: "#ff9d4a",
-          backgroundColor: "rgba(255,157,74,0.08)",
-          tension: 0.4, fill: true, pointRadius: 2, pointBackgroundColor: "#ff9d4a",
-        },
-        {
-          label: "Gefühlt °C",
-          data: data.feels_like,
-          borderColor: "#4a9eff",
-          borderDash: [4, 4],
-          tension: 0.4, fill: false, pointRadius: 0,
-        },
-      ],
-    },
-    options: { ...chartBase },
-  });
-}
-
-function buildPrecipChart(data) {
-  const ctx = document.getElementById("precipChart").getContext("2d");
-  if (precipChart) precipChart.destroy();
-
-  precipChart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: data.labels,
-      datasets: [{
-        label: "Niederschlag mm",
-        data: data.datasets?.precipitation ?? data.precipitation,
-        backgroundColor: "rgba(74,158,255,0.4)",
-        borderColor: "#4a9eff",
-        borderWidth: 1,
-        borderRadius: 2,
-      }],
-    },
-    options: {
-      ...chartBase,
-      plugins: { ...chartBase.plugins, legend: { display: false } },
-    },
-  });
-}
-
-// ─────────────────────────────────────────────────────
-// Sun Arc Animation
-// ─────────────────────────────────────────────────────
-
-function animateSunArc(rise, set) {
-  if (!rise || !set) return;
-  const now      = new Date();
-  const total    = set - rise;
-  const elapsed  = now - rise;
-  const progress = Math.max(0, Math.min(1, elapsed / total));
-
-  const arcLen = 283; // Approximate full arc length
-  const offset = arcLen * (1 - progress);
-  document.getElementById("arcProgress").style.strokeDashoffset = offset;
-
-  // Sun dot position along arc
-  const angle  = Math.PI * progress;   // 0 = left, π = right
-  const cx     = 10 + 90 * (1 + Math.cos(Math.PI - angle));   // 10..190
-  const cy     = 100 - 90 * Math.sin(angle);
-  const dot    = document.getElementById("sunDot");
-  dot.setAttribute("cx", cx);
-  dot.setAttribute("cy", cy);
-}
-
-// ─────────────────────────────────────────────────────
-// Chart toggle (7 Tage / 48h)
-// ─────────────────────────────────────────────────────
-
-window.switchChart = function(mode) {
-  currentChartMode = mode;
-  document.querySelectorAll(".toggle-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.chart === mode);
-  });
-  if (mode === "daily") {
-    loadDailyCharts();
-  } else {
-    loadHourlyCharts();
-  }
+  updateForecastRange();
+  loadHourlyPlot(hours);
 };
 
 // ─────────────────────────────────────────────────────
@@ -332,7 +223,6 @@ async function loadSummary() {
     console.error("Summary failed:", e);
     document.getElementById("statusDot").className = "status-dot error";
     document.getElementById("lastUpdated").textContent = "OFFLINE";
-    document.getElementById("heroDesc").textContent = "Backend nicht erreichbar – ETL-Job ausführen?";
   }
 }
 
@@ -346,46 +236,23 @@ async function loadForecast() {
   }
 }
 
-async function loadDailyCharts() {
-  try {
-    const data = await apiFetch("/stats/temperature");
-    buildTempChart(data);
-    buildPrecipChart(data);
-  } catch (e) {
-    console.warn("Daily chart data unavailable:", e);
-  }
-}
-
-async function loadHourlyCharts() {
-  try {
-    const [hourly, dailyStats] = await Promise.all([
-      apiFetch("/stats/hourly-temp?hours=48"),
-      apiFetch("/stats/temperature"),
-    ]);
-    buildHourlyChart(hourly);
-    buildPrecipChart(dailyStats);
-  } catch (e) {
-    console.warn("Hourly chart data unavailable:", e);
-  }
-}
-
 // ─────────────────────────────────────────────────────
 // Init & Auto-Refresh
 // ─────────────────────────────────────────────────────
 
 async function init() {
+  updateForecastRange();
   await Promise.all([
     loadSummary(),
     loadForecast(),
-    loadDailyCharts(),
+    loadHourlyPlot(currentPlotHours),
   ]);
 }
 
 init();
 
-// Alle 5 Minuten neu laden
 setInterval(() => {
   loadSummary();
-  if (currentChartMode === "daily") loadDailyCharts();
-  else loadHourlyCharts();
+  loadForecast();
+  loadHourlyPlot(currentPlotHours);
 }, 5 * 60 * 1000);

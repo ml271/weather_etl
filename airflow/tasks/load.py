@@ -86,26 +86,29 @@ def load_hourly(cursor, records: list[dict]):
             temperature, feels_like,
             precipitation, rain, snowfall,
             wind_speed, wind_direction,
-            humidity, weather_code, is_day
+            humidity, sunshine_duration,
+            weather_code, is_day
         ) VALUES (
             %(city)s, %(forecast_time)s,
             %(temperature)s, %(feels_like)s,
             %(precipitation)s, %(rain)s, %(snowfall)s,
             %(wind_speed)s, %(wind_direction)s,
-            %(humidity)s, %(weather_code)s, %(is_day)s
+            %(humidity)s, %(sunshine_duration)s,
+            %(weather_code)s, %(is_day)s
         )
         ON CONFLICT (city, forecast_time) DO UPDATE SET
-            temperature   = EXCLUDED.temperature,
-            feels_like    = EXCLUDED.feels_like,
-            precipitation = EXCLUDED.precipitation,
-            rain          = EXCLUDED.rain,
-            snowfall      = EXCLUDED.snowfall,
-            wind_speed    = EXCLUDED.wind_speed,
-            wind_direction = EXCLUDED.wind_direction,
-            humidity      = EXCLUDED.humidity,
-            weather_code  = EXCLUDED.weather_code,
-            is_day        = EXCLUDED.is_day,
-            created_at    = NOW()
+            temperature        = EXCLUDED.temperature,
+            feels_like         = EXCLUDED.feels_like,
+            precipitation      = EXCLUDED.precipitation,
+            rain               = EXCLUDED.rain,
+            snowfall           = EXCLUDED.snowfall,
+            wind_speed         = EXCLUDED.wind_speed,
+            wind_direction     = EXCLUDED.wind_direction,
+            humidity           = EXCLUDED.humidity,
+            sunshine_duration  = EXCLUDED.sunshine_duration,
+            weather_code       = EXCLUDED.weather_code,
+            is_day             = EXCLUDED.is_day,
+            created_at         = NOW()
     """
     psycopg2.extras.execute_batch(cursor, sql, records)
     logger.info(f"Upserted {len(records)} hourly records")

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Edit(*)",
+      "Write(*)",
+      "Read(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "Bash(docker compose build frontend)",
+      "Bash(docker compose up -d frontend)",
+      "Bash(curl -s -I http://localhost/css/style.css)",
+      "Bash(docker compose build backend frontend)",
+      "Bash(docker compose up -d backend frontend)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8000/charts/hourly-plot?hours=72\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8000/charts/hourly-plot?hours=96\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8000/charts/hourly-plot\")"
+    ]
+  }
+}

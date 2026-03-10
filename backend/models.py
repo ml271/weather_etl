@@ -39,8 +39,9 @@ class WeatherHourly(Base):
     snowfall      = Column(Numeric(5, 2))
     wind_speed    = Column(Numeric(6, 2))
     wind_direction = Column(Integer)
-    humidity      = Column(Integer)
-    weather_code  = Column(Integer)
+    humidity           = Column(Integer)
+    sunshine_duration  = Column(Numeric(6, 2))   # seconds per hour
+    weather_code       = Column(Integer)
     is_day        = Column(Boolean)
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
 

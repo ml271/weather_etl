@@ -72,9 +72,10 @@ class WeatherHourlySchema(BaseModel):
     rain:           Optional[Decimal] = None
     snowfall:       Optional[Decimal] = None
     wind_speed:     Optional[Decimal] = None
-    wind_direction: Optional[int] = None
-    humidity:       Optional[int] = None
-    weather_code:   Optional[int] = None
+    wind_direction:    Optional[int] = None
+    humidity:          Optional[int] = None
+    sunshine_duration: Optional[Decimal] = None
+    weather_code:      Optional[int] = None
     is_day:         Optional[bool] = None
 
     @computed_field
