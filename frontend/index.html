@@ -3,86 +3,193 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Weather Station – ETL Dashboard</title>
+  <title>Weather Station – Stationssuche</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
+<body class="page-search">
 
-  <!-- ░░ BACKGROUND GRID ░░ -->
+  <!-- ░░ BACKGROUND ░░ -->
   <div class="bg-grid"></div>
   <div class="bg-glow"></div>
 
-  <!-- ░░ HEADER ░░ -->
-  <header class="header">
-    <div class="header-left">
+  <!-- ░░ LANDING HERO ░░ -->
+  <main class="search-page">
+
+    <div class="search-hero">
       <span class="station-label">WEATHER STATION</span>
-      <h1 class="city-name" id="cityName">— —</h1>
+      <h1 class="search-title">Wetterstation<br/>suchen</h1>
+      <p class="search-subtitle">Stadt, Region oder Ort eingeben</p>
     </div>
-    <div class="header-center">
-      <span class="forecast-range" id="forecastRange">——</span>
+
+    <!-- Search Input -->
+    <div class="search-box-wrap">
+      <div class="search-box">
+        <span class="search-icon">⌕</span>
+        <input
+          id="searchInput"
+          class="search-input"
+          type="text"
+          placeholder="z.B. München, Bayern, Freiburg …"
+          autocomplete="off"
+          autofocus
+        />
+        <span class="search-clear" id="searchClear" onclick="clearSearch()">✕</span>
+      </div>
+
+      <!-- Results -->
+      <div class="search-results" id="searchResults">
+        <!-- Populated by JS -->
+      </div>
     </div>
-    <div class="header-right">
-      <div class="status-dot" id="statusDot"></div>
-      <span class="last-updated" id="lastUpdated">Verbinde...</span>
+
+    <!-- Empty / error state -->
+    <div class="search-hint" id="searchHint">
+      <span class="hint-icon">↑</span>
+      Suche startet ab 2 Zeichen
     </div>
-  </header>
-
-  <!-- ░░ ALERT BANNER ░░ -->
-  <div class="alert-banner" id="alertBanner" style="display:none"></div>
-
-  <!-- ░░ MAIN GRID ░░ -->
-  <main class="dashboard-grid">
-
-    <!-- Active Alerts -->
-    <section class="card card--alerts">
-      <div class="card-label">AKTIVE WARNUNGEN <span class="alert-count" id="alertCount">0</span></div>
-      <div class="alerts-list" id="alertsList">
-        <div class="no-alerts">Keine aktiven Warnungen ✓</div>
-      </div>
-    </section>
-
-    <!-- Hourly Plot (matplotlib PNG) -->
-    <section class="card card--hourly-plot">
-      <div class="card-label">STÜNDLICHE PROGNOSE
-        <span class="plot-hours">
-          <button class="toggle-btn" data-hours="24" onclick="switchPlotHours(24)">24h</button>
-          <button class="toggle-btn" data-hours="48" onclick="switchPlotHours(48)">48h</button>
-          <button class="toggle-btn" data-hours="72" onclick="switchPlotHours(72)">72h</button>
-          <button class="toggle-btn active" data-hours="96" onclick="switchPlotHours(96)">96h</button>
-        </span>
-      </div>
-      <div class="hourly-plot-wrapper">
-        <img id="hourlyPlotImg" class="hourly-plot-img" src="" alt="Stündliche Prognose" />
-        <div class="hourly-plot-loading" id="hourlyPlotLoading">Lade Diagramm...</div>
-      </div>
-    </section>
-
-    <!-- 7-day forecast -->
-    <section class="card card--forecast">
-      <div class="card-label">7-TAGE PROGNOSE</div>
-      <div class="forecast-row" id="forecastRow">
-        <div class="forecast-loading">Lade...</div>
-      </div>
-    </section>
 
   </main>
 
-  <!-- ░░ DAY DETAIL MODAL ░░ -->
-  <div class="modal-backdrop" id="dayModal" onclick="closeDayModal()">
-    <div class="modal-box" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <span class="modal-title" id="modalTitle">—</span>
-        <button class="modal-close" onclick="closeDayModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <img id="modalPlotImg" class="modal-plot-img" src="" alt="" />
-        <div class="modal-loading" id="modalLoading">Lade Stundendaten...</div>
-      </div>
-    </div>
-  </div>
+  <script>
+    const API = "/api";
+    let debounceTimer = null;
+    let lastStations  = [];
 
-  <script src="js/app.js"></script>
+    const input    = document.getElementById("searchInput");
+    const results  = document.getElementById("searchResults");
+    const hint     = document.getElementById("searchHint");
+    const clearBtn = document.getElementById("searchClear");
+
+    function toDashboard(city, lat, lon) {
+      let url = "dashboard.html?city=" + encodeURIComponent(city);
+      if (lat != null && lon != null) url += "&lat=" + lat + "&lon=" + lon;
+      window.location.href = url;
+    }
+
+    // ── Event Delegation: clicks auf result-item ──────────────────
+    results.addEventListener("click", e => {
+      const item = e.target.closest(".result-item");
+      if (!item) return;
+      const city = item.dataset.city;
+      if (city) toDashboard(city, item.dataset.lat, item.dataset.lon);
+    });
+
+    // ── Input Handler ─────────────────────────────────────────────
+    input.addEventListener("input", () => {
+      clearTimeout(debounceTimer);
+      const q = input.value.trim();
+      clearBtn.style.display = q.length > 0 ? "block" : "none";
+
+      if (q.length < 2) {
+        lastStations = [];
+        results.innerHTML = "";
+        results.classList.remove("open");
+        hint.textContent = "↑ Suche startet ab 2 Zeichen";
+        hint.className = "search-hint";
+        return;
+      }
+
+      hint.textContent = "Suche …";
+      hint.className = "search-hint searching";
+      debounceTimer = setTimeout(() => fetchStations(q), 280);
+    });
+
+    // ── Enter / Escape ─────────────────────────────────────────────
+    input.addEventListener("keydown", e => {
+      if (e.key === "Escape") {
+        clearSearch();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const q = input.value.trim();
+        if (q.length < 2) return;
+
+        // Falls Ergebnisse schon da: sofort navigieren
+        const first = results.querySelector(".result-item");
+        if (first) {
+          toDashboard(first.dataset.city, first.dataset.lat, first.dataset.lon);
+          return;
+        }
+
+        // Sonst: Debounce canceln und sofort suchen, dann navigieren
+        clearTimeout(debounceTimer);
+        hint.textContent = "Suche …";
+        hint.className = "search-hint searching";
+        fetchStations(q, true);
+      }
+    });
+
+    // ── Fetch ──────────────────────────────────────────────────────
+    async function fetchStations(q, navigateFirst = false) {
+      try {
+        const res = await fetch(`${API}/stations/search?q=${encodeURIComponent(q)}&limit=8`);
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        lastStations = data;
+        renderResults(data, q);
+        if (navigateFirst && data.length > 0) {
+          toDashboard(data[0].name, data[0].lat, data[0].lon);
+        }
+      } catch (err) {
+        hint.textContent = "Verbindungsfehler – Backend erreichbar?";
+        hint.className = "search-hint error";
+        results.innerHTML = "";
+        results.classList.remove("open");
+      }
+    }
+
+    // ── Render ─────────────────────────────────────────────────────
+    function renderResults(stations, q) {
+      if (stations.length === 0) {
+        results.innerHTML = `<div class="result-empty">Keine Ergebnisse für „${q}"</div>`;
+        results.classList.add("open");
+        hint.className = "search-hint hidden";
+        return;
+      }
+
+      hint.className = "search-hint hidden";
+
+      results.innerHTML = stations.map(s => {
+        const name   = escHtml(s.name);
+        const region = s.region ? escHtml(s.region) : "";
+        const country = s.country ? escHtml(s.country) : "";
+        const lat    = parseFloat(s.lat).toFixed(2);
+        const lon    = parseFloat(s.lon).toFixed(2);
+        return `<button class="result-item" data-city="${name}" data-lat="${s.lat}" data-lon="${s.lon}">
+          <span class="result-icon">📍</span>
+          <span class="result-body">
+            <span class="result-name">${highlight(name, q)}</span>
+            <span class="result-meta">${region ? highlight(region, q) : ""}${region && country ? " · " : ""}${country}</span>
+          </span>
+          <span class="result-coords">${lat}° N · ${lon}° E</span>
+          <span class="result-arrow">→</span>
+        </button>`;
+      }).join("");
+
+      results.classList.add("open");
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function highlight(text, q) {
+      if (!q || !text) return text ?? "";
+      const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+      return text.replace(re, "<mark>$1</mark>");
+    }
+
+    function clearSearch() {
+      input.value = "";
+      lastStations = [];
+      results.innerHTML = "";
+      results.classList.remove("open");
+      clearBtn.style.display = "none";
+      hint.textContent = "↑ Suche startet ab 2 Zeichen";
+      hint.className = "search-hint";
+      input.focus();
+    }
+  </script>
 </body>
 </html>

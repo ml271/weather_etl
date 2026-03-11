@@ -4,6 +4,19 @@
 
 const API = "/api";   // Nginx proxy → backend:8000
 
+// City / coords from URL params (?city=München&lat=48.13&lon=11.58)
+const _params = new URLSearchParams(window.location.search);
+const CITY = _params.get("city") || null;
+const LAT  = _params.get("lat")  ? parseFloat(_params.get("lat"))  : null;
+const LON  = _params.get("lon")  ? parseFloat(_params.get("lon"))  : null;
+
+// Append ?city= to API paths if provided
+function apiPath(path) {
+  if (!CITY) return path;
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}city=${encodeURIComponent(CITY)}`;
+}
+
 const WMO_ICONS = {
   0:"☀️",1:"🌤️",2:"⛅",3:"☁️",
   45:"🌫️",48:"🌫️",
@@ -161,7 +174,7 @@ window.openDayModal = function(dateStr) {
 
   img.onload  = () => { loading.style.display = "none"; img.classList.add("loaded"); };
   img.onerror = () => { loading.textContent = "Keine Stundendaten für diesen Tag."; };
-  img.src = `${API}/charts/day-detail?date=${dateStr}&_t=${Date.now()}`;
+  img.src = `${API}${apiPath(`/charts/day-detail?date=${dateStr}`)}&_t=${Date.now()}`;
 };
 
 window.closeDayModal = function() {
@@ -184,7 +197,7 @@ function loadHourlyPlot(hours) {
   img.classList.remove("loaded");
   loading.style.display = "block";
 
-  const url = `${API}/charts/hourly-plot?hours=${hours}&_t=${Date.now()}`;
+  const url = `${API}${apiPath(`/charts/hourly-plot?hours=${hours}`)}&_t=${Date.now()}`;
 
   img.onload = () => {
     loading.style.display = "none";
@@ -217,7 +230,7 @@ async function apiFetch(path) {
 
 async function loadSummary() {
   try {
-    const data = await apiFetch("/summary");
+    const data = await apiFetch(apiPath("/summary"));
     renderSummary(data);
   } catch (e) {
     console.error("Summary failed:", e);
@@ -226,9 +239,17 @@ async function loadSummary() {
   }
 }
 
+async function fetchWeatherNow() {
+  if (!CITY || LAT == null || LON == null) return false;
+  const url = `${API}/weather/fetch-now?city=${encodeURIComponent(CITY)}&lat=${LAT}&lon=${LON}`;
+  const res = await fetch(url, { method: "POST" });
+  if (!res.ok) throw new Error(`fetch-now → ${res.status}`);
+  return true;
+}
+
 async function loadForecast() {
   try {
-    const data = await apiFetch("/forecast/daily?days=7");
+    const data = await apiFetch(apiPath("/forecast/daily?days=7"));
     renderForecast(data);
   } catch (e) {
     document.getElementById("forecastRow").innerHTML =
@@ -242,6 +263,31 @@ async function loadForecast() {
 
 async function init() {
   updateForecastRange();
+
+  // If we have coords, check first whether data exists – if not, fetch before rendering
+  if (CITY && LAT != null && LON != null) {
+    try {
+      await apiFetch(apiPath("/forecast/daily?days=1"));
+    } catch (e) {
+      if (e.message.includes("404")) {
+        // Show loading state on both panels while fetching
+        document.getElementById("forecastRow").innerHTML =
+          `<div class="forecast-loading">⏳ Wetterdaten für ${CITY} werden geladen …</div>`;
+        const plotLoading = document.getElementById("hourlyPlotLoading");
+        plotLoading.style.display = "block";
+        plotLoading.textContent = "⏳ Wetterdaten werden geladen …";
+        try {
+          await fetchWeatherNow();
+        } catch (fetchErr) {
+          document.getElementById("forecastRow").innerHTML =
+            `<div class="forecast-loading">Fehler beim Laden – bitte Seite neu laden.</div>`;
+          plotLoading.textContent = "Fehler beim Laden.";
+          return;
+        }
+      }
+    }
+  }
+
   await Promise.all([
     loadSummary(),
     loadForecast(),

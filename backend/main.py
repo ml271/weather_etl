@@ -23,6 +23,8 @@ from sqlalchemy import desc, func, text, case
 from database import get_db, engine
 from models import WeatherDaily, WeatherHourly, WeatherAlert, Base
 from schemas import WeatherDailySchema, WeatherHourlySchema, WeatherAlertSchema, ForecastSummary
+from routers import stations, weather_fetch
+import chart_cache
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,6 +41,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(stations.router)
+app.include_router(weather_fetch.router)
 
 DEFAULT_CITY = os.getenv("DEFAULT_CITY", "Freiburg")
 
@@ -263,6 +268,14 @@ def get_day_detail_plot(
     from datetime import timedelta, date as _date
 
     city = city or DEFAULT_CITY
+
+    # ── Cache check ──────────────────────────────────────
+    cache_key = f"{city}:day:{date_str}"
+    cached = chart_cache.get(cache_key)
+    if cached:
+        return Response(content=cached, media_type="image/png",
+                        headers={"Cache-Control": "no-cache, max-age=0", "X-Cache": "HIT"})
+
     try:
         target_date = _date.fromisoformat(date_str)
     except ValueError:
@@ -439,14 +452,15 @@ def get_day_detail_plot(
     plt.tight_layout(pad=0.8, rect=[0.10, 0.01, 1.0, 0.97])
 
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=130, facecolor=BG, bbox_inches="tight")
+    fig.savefig(buf, format="png", dpi=100, facecolor=BG, bbox_inches="tight")
     plt.close(fig)
-    buf.seek(0)
+    chart_data = buf.getvalue()
+    chart_cache.put(cache_key, chart_data)
 
     return Response(
-        content=buf.read(),
+        content=chart_data,
         media_type="image/png",
-        headers={"Cache-Control": "no-cache, max-age=0"},
+        headers={"Cache-Control": "no-cache, max-age=0", "X-Cache": "MISS"},
     )
 
 
@@ -461,6 +475,13 @@ def get_hourly_plot(
     from datetime import timedelta
 
     city = city or DEFAULT_CITY
+
+    # ── Cache check ──────────────────────────────────────
+    cache_key = f"{city}:hourly:{hours}"
+    cached = chart_cache.get(cache_key)
+    if cached:
+        return Response(content=cached, media_type="image/png",
+                        headers={"Cache-Control": "no-cache, max-age=0", "X-Cache": "HIT"})
     now  = datetime.now(timezone.utc)
 
     records = (
@@ -676,12 +697,13 @@ def get_hourly_plot(
     plt.tight_layout(pad=0.8, rect=[0.10, 0.01, 1.0, 0.97])
 
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=130, facecolor=BG, bbox_inches="tight")
+    fig.savefig(buf, format="png", dpi=100, facecolor=BG, bbox_inches="tight")
     plt.close(fig)
-    buf.seek(0)
+    chart_data = buf.getvalue()
+    chart_cache.put(cache_key, chart_data)
 
     return Response(
-        content=buf.read(),
+        content=chart_data,
         media_type="image/png",
-        headers={"Cache-Control": "no-cache, max-age=0"},
+        headers={"Cache-Control": "no-cache, max-age=0", "X-Cache": "MISS"},
     )

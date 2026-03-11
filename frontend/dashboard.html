@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Station – Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ░░ BACKGROUND GRID ░░ -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+
+  <!-- ░░ HEADER ░░ -->
+  <header class="header">
+    <div class="header-left">
+      <a href="index.html" class="back-link">← SUCHE</a>
+      <span class="station-label">WEATHER STATION</span>
+      <h1 class="city-name" id="cityName">— —</h1>
+    </div>
+    <div class="header-center">
+      <span class="forecast-range" id="forecastRange">——</span>
+    </div>
+    <div class="header-right">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="last-updated" id="lastUpdated">Verbinde...</span>
+    </div>
+  </header>
+
+  <!-- ░░ ALERT BANNER ░░ -->
+  <div class="alert-banner" id="alertBanner" style="display:none"></div>
+
+  <!-- ░░ MAIN GRID ░░ -->
+  <main class="dashboard-grid">
+
+    <!-- 7-day forecast -->
+    <section class="card card--forecast">
+      <div class="card-label">7-TAGE PROGNOSE</div>
+      <div class="forecast-row" id="forecastRow">
+        <div class="forecast-loading">Lade...</div>
+      </div>
+    </section>
+
+    <!-- Active Alerts -->
+    <section class="card card--alerts">
+      <div class="card-label">AKTIVE WARNUNGEN <span class="alert-count" id="alertCount">0</span></div>
+      <div class="alerts-list" id="alertsList">
+        <div class="no-alerts">Keine aktiven Warnungen ✓</div>
+      </div>
+    </section>
+
+    <!-- Hourly Plot (matplotlib PNG) -->
+    <section class="card card--hourly-plot">
+      <div class="card-label">STÜNDLICHE PROGNOSE
+        <span class="plot-hours">
+          <button class="toggle-btn" data-hours="24" onclick="switchPlotHours(24)">24h</button>
+          <button class="toggle-btn" data-hours="48" onclick="switchPlotHours(48)">48h</button>
+          <button class="toggle-btn" data-hours="72" onclick="switchPlotHours(72)">72h</button>
+          <button class="toggle-btn active" data-hours="96" onclick="switchPlotHours(96)">96h</button>
+        </span>
+      </div>
+      <div class="hourly-plot-wrapper">
+        <img id="hourlyPlotImg" class="hourly-plot-img" src="" alt="Stündliche Prognose" />
+        <div class="hourly-plot-loading" id="hourlyPlotLoading">Lade Diagramm...</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ░░ DAY DETAIL MODAL ░░ -->
+  <div class="modal-backdrop" id="dayModal" onclick="closeDayModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span class="modal-title" id="modalTitle">—</span>
+        <button class="modal-close" onclick="closeDayModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <img id="modalPlotImg" class="modal-plot-img" src="" alt="" />
+        <div class="modal-loading" id="modalLoading">Lade Stundendaten...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

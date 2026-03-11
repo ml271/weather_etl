@@ -46,6 +46,17 @@ class WeatherHourly(Base):
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class Station(Base):
+    __tablename__ = "stations"
+
+    id      = Column(Integer, primary_key=True, index=True)
+    name    = Column(String(100), nullable=False)
+    region  = Column(String(100))
+    country = Column(String(50), default="Germany")
+    lat     = Column(Numeric(9, 6), nullable=False)
+    lon     = Column(Numeric(9, 6), nullable=False)
+
+
 class WeatherAlert(Base):
     __tablename__ = "weather_alerts"
 
