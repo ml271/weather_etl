@@ -8,6 +8,7 @@ from datetime import date, datetime, timezone
 from typing import Optional
 
 import matplotlib
+import matplotlib.gridspec as mgs
 matplotlib.use("Agg")  # non-interactive backend
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -349,15 +350,15 @@ def get_day_detail_plot(
     # ── Same 6-panel layout as main plot ──
     fig, axes = plt.subplots(
         6, 1,
-        figsize=(11, 12),
-        gridspec_kw={"height_ratios": [3, 2, 2.5, 0.7, 1.5, 1.5], "hspace": 0.32},
+        figsize=(8, 6),
+        gridspec_kw={"height_ratios": [3, 2, 2.5, 0.7, 1.5, 1.5], "hspace": 0.58},
         sharex=True,
         facecolor=BG,
     )
 
     def hour_fmt(x, pos):
         h = mdates.num2date(x).hour
-        return f"{h:02d}" if h % 2 == 0 else ""
+        return f"{h:02d}" if h % 4 == 0 else ""
 
     def style_ax(ax, ylabel, ylabel_color=TEXT):
         ax.set_facecolor(SURFACE)
@@ -365,12 +366,12 @@ def get_day_detail_plot(
         ax.grid(True, color=GRID_C, linewidth=0.5, linestyle="--", alpha=0.5, which="major", axis="y")
         ax.set_ylabel(ylabel, color=ylabel_color, fontsize=8, labelpad=6)
         ax.yaxis.label.set_color(ylabel_color)
-        ax.tick_params(colors=DIM, labelsize=8, which="both")
+        ax.tick_params(colors=DIM, labelsize=7, which="both")
         ax.xaxis.set_minor_locator(mdates.HourLocator(interval=1))
         ax.xaxis.set_major_locator(mdates.HourLocator(byhour=range(0, 24, 2)))
         ax.xaxis.set_major_formatter(mticker.FuncFormatter(hour_fmt))
         ax.tick_params(axis="x", which="minor", length=3, color=DIM, labelbottom=False)
-        ax.tick_params(axis="x", which="major", length=6, color=DIM, labelbottom=True, labelsize=7, pad=5)
+        ax.tick_params(axis="x", which="major", length=6, color=DIM, labelbottom=True, labelsize=6, pad=3)
 
     # ── Panel 1: Temperature ──
     ax1 = axes[0]
@@ -389,13 +390,13 @@ def get_day_detail_plot(
 
     def _hour_fmt_top(x, pos):
         h = mdates.num2date(x).hour
-        return f"{h:02d}" if h % 2 == 0 else ""
+        return f"{h:02d}" if h % 4 == 0 else ""
 
     _ax1_top = ax1.secondary_xaxis("top")
     _ax1_top.xaxis.set_minor_locator(mdates.HourLocator(interval=1))
     _ax1_top.xaxis.set_major_locator(mdates.HourLocator(byhour=range(0, 24, 2)))
     _ax1_top.xaxis.set_major_formatter(mticker.FuncFormatter(_hour_fmt_top))
-    _ax1_top.tick_params(axis="x", which="major", length=0, labelsize=7, colors=DIM, pad=8)
+    _ax1_top.tick_params(axis="x", which="major", length=0, labelsize=6, colors=DIM, pad=4)
     _ax1_top.tick_params(axis="x", which="minor", length=0, labeltop=False)
     _ax1_top.spines["top"].set_visible(False)
 
@@ -556,14 +557,22 @@ def get_hourly_plot(
             midnights.append(md)
             md += timedelta(days=1)
 
-    # height_ratios: wind-dir panel (idx 3) is intentionally narrow
-    fig, axes = plt.subplots(
-        6, 1,
-        figsize=(11, 12),
-        gridspec_kw={"height_ratios": [3, 2, 2.5, 0.7, 1.5, 1.5], "hspace": 0.32},
-        sharex=True,
-        facecolor=BG,
-    )
+    # Nested GridSpec: 3 paired groups, zero space within each pair, normal gap between pairs.
+    # Pair 1 → ax1 (Temp) + ax2 (Humidity)
+    # Pair 2 → ax3 (Wind speed) + ax4 (Wind direction)
+    # Pair 3 → ax5 (Precipitation) + ax6 (Sunshine)
+    fig = plt.figure(figsize=(8, 6), facecolor=BG)
+    _outer = mgs.GridSpec(3, 1, figure=fig, hspace=0.22)
+    _p1 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[0], hspace=0.2, height_ratios=[3, 2])
+    _p2 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[1], hspace=0.2, height_ratios=[2.5, 0.7])
+    _p3 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[2], hspace=0.2, height_ratios=[1.5, 1.5])
+    ax1 = fig.add_subplot(_p1[0])
+    ax2 = fig.add_subplot(_p1[1], sharex=ax1)
+    ax3 = fig.add_subplot(_p2[0])
+    ax4 = fig.add_subplot(_p2[1], sharex=ax3)
+    ax5 = fig.add_subplot(_p3[0])
+    ax6 = fig.add_subplot(_p3[1], sharex=ax5)
+    axes = [ax1, ax2, ax3, ax4, ax5, ax6]
 
     _WD_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -576,18 +585,22 @@ def get_hourly_plot(
         _ds = max(times[0], datetime(_check.year, _check.month, _check.day, 0, 0))
         _de = min(times[-1], datetime(_check.year, _check.month, _check.day, 23, 59))
         _mid_h = (_ds.hour + _ds.minute / 60.0 + _de.hour + _de.minute / 60.0) / 2.0
-        _lh = int(_mid_h / 2.0 + 0.5) * 2   # snap to nearest even hour
-        _lh = max(0, min(22, _lh))
+        _lh = int(_mid_h / 4.0 + 0.5) * 4   # snap to nearest 4-hour mark
+        _lh = max(0, min(20, _lh))
         day_label_hours[_check] = _lh
         _check += timedelta(days=1)
 
-    def hour_fmt(x, pos):
+    def hour_fmt_plain(x, pos):
+        h = mdates.num2date(x).hour
+        return f"{h:02d}" if h % 4 == 0 else ""
+
+    def hour_fmt_with_day(x, pos):
         dt = mdates.num2date(x)
         h  = dt.hour
         lh = day_label_hours.get(dt.date())
         if lh is not None and h == lh:
             return f"{h:02d}\n{_WD_EN[dt.weekday()]}  {dt.strftime('%d.%m')}"
-        return f"{h:02d}" if h % 2 == 0 else ""
+        return f"{h:02d}" if h % 4 == 0 else ""
 
     def style_ax(ax, ylabel, ylabel_color=TEXT):
         ax.set_facecolor(SURFACE)
@@ -595,26 +608,28 @@ def get_hourly_plot(
         ax.grid(True, color=GRID_C, linewidth=0.5, linestyle="--", alpha=0.5, which="major", axis="y")
         ax.set_ylabel(ylabel, color=ylabel_color, fontsize=8, labelpad=6)
         ax.yaxis.label.set_color(ylabel_color)
-        ax.tick_params(colors=DIM, labelsize=8, which="both")
+        ax.tick_params(colors=DIM, labelsize=7, which="both")
         ax.xaxis.set_minor_locator(mdates.HourLocator(interval=1))
         ax.xaxis.set_major_locator(mdates.HourLocator(byhour=range(0, 24, 2)))
-        ax.xaxis.set_major_formatter(mticker.FuncFormatter(hour_fmt))
+        ax.xaxis.set_major_formatter(mticker.FuncFormatter(hour_fmt_plain))
         ax.tick_params(axis="x", which="minor", length=3, color=DIM, labelbottom=False)
-        ax.tick_params(axis="x", which="major", length=6, color=DIM, labelbottom=True, labelsize=7, pad=5)
+        ax.tick_params(axis="x", which="major", length=6, color=DIM, labelbottom=True, labelsize=6, pad=3)
         for md in midnights:
             ax.axvline(md, color=DIV_C, linewidth=1.2, alpha=0.9, zorder=1)
 
     # ── Panel 1: Temperature ──────────────────────────────
-    ax1 = axes[0]
     ax1.plot(times, temp, color=WARM, linewidth=1.8, zorder=3)
     ax1.fill_between(times, temp, alpha=0.07, color=WARM, zorder=2)
     if d_noon_max:
-        ax1.scatter(d_noon_max, d_temp_max, color=DOT_MAX, s=55, zorder=5,
-                    edgecolors="white", linewidths=0.6, label="Tagesmax")
+        ax1.scatter(d_noon_max, d_temp_max, color=DOT_MAX, s=25, zorder=5,
+                    edgecolors="black", linewidths=0.2, label="Temp. max")
     if d_noon_min:
-        ax1.scatter(d_noon_min, d_temp_min, color=DOT_MIN, s=55, zorder=5,
-                    edgecolors="white", linewidths=0.6, label="Tagesmin")
+        ax1.scatter(d_noon_min, d_temp_min, color=DOT_MIN, s=25, zorder=5,
+                    edgecolors="black", linewidths=0.2, label="Temp. min")
     style_ax(ax1, "Temp  [°C]", WARM)
+    # Pair 1 top: hide bottom edge so ax1+ax2 look merged
+    ax1.tick_params(axis="x", labelbottom=False)
+    ax1.spines["bottom"].set_visible(False)
     # Top spine: tick marks from ax1, no labels (labels come from secondary axis below)
     ax1.tick_params(axis="x", top=True, labeltop=False, which="major", length=6, color=DIM)
     ax1.tick_params(axis="x", top=True, which="minor", length=3, color=DIM)
@@ -629,13 +644,13 @@ def get_hourly_plot(
         if lh is not None and h == lh:
             # Last line is closest to spine on top axis, so put hour number last
             return f"{_WD_EN[dt.weekday()]}  {dt.strftime('%d.%m')}\n{h:02d}"
-        return f"{h:02d}" if h % 2 == 0 else ""
+        return f"{h:02d}" if h % 4 == 0 else ""
 
     _ax1_top = ax1.secondary_xaxis("top")
     _ax1_top.xaxis.set_minor_locator(mdates.HourLocator(interval=1))
     _ax1_top.xaxis.set_major_locator(mdates.HourLocator(byhour=range(0, 24, 2)))
     _ax1_top.xaxis.set_major_formatter(mticker.FuncFormatter(_hour_fmt_top))
-    _ax1_top.tick_params(axis="x", which="major", length=0, labelsize=7, colors=DIM, pad=8)
+    _ax1_top.tick_params(axis="x", which="major", length=0, labelsize=6, colors=DIM, pad=4)
     _ax1_top.tick_params(axis="x", which="minor", length=0, labeltop=False)
     _ax1_top.spines["top"].set_visible(False)
 
@@ -647,22 +662,24 @@ def get_hourly_plot(
     )
 
     # ── Panel 2: Humidity ─────────────────────────────────
-    ax2 = axes[1]
     ax2.plot(times, humidity, color=HUMID, linewidth=1.6, zorder=3)
     ax2.fill_between(times, humidity, alpha=0.08, color=HUMID, zorder=2)
     ax2.set_ylim(0, 105)
     style_ax(ax2, "Humidity  [%]", HUMID)
+    ax2.spines["top"].set_visible(False)
 
     # ── Panel 3: Wind Speed ───────────────────────────────
-    ax3 = axes[2]
     ax3.fill_between(times, ws, alpha=0.15, color=WIND_C, zorder=2)
     ax3.plot(times, ws, color=WIND_C, linewidth=1.6, zorder=3)
     ax3.set_ylim(bottom=0)
     style_ax(ax3, "Wind  [km/h]", WIND_C)
+    # Pair 2 top: hide bottom edge
+    ax3.tick_params(axis="x", labelbottom=False)
+    ax3.spines["bottom"].set_visible(False)
 
     # ── Panel 4: Wind Direction (narrow quiver strip) ─────
-    ax4 = axes[3]
     style_ax(ax4, "Dir", WIND_D)
+    ax4.spines["top"].set_visible(False)
     ax4.set_ylim(-1.2, 1.2)
     ax4.set_yticks([])
     ax4.axhline(0, color=GRID_C, linewidth=0.5, zorder=1)
@@ -676,21 +693,25 @@ def get_hourly_plot(
                headwidth=3, headlength=3.5, zorder=4, pivot="mid")
 
     # ── Panel 5: Precipitation ────────────────────────────
-    ax5 = axes[4]
     ax5.bar(times, precip, width=BAR_W, color=PRECIP, alpha=0.85, zorder=3, align="center")
     ax5.set_ylim(bottom=0)
     style_ax(ax5, "Precip  [mm]", PRECIP)
+    # Pair 3 top: hide bottom edge
+    ax5.tick_params(axis="x", labelbottom=False)
+    ax5.spines["bottom"].set_visible(False)
 
     # ── Panel 6: Sunshine Duration ────────────────────────
-    ax6 = axes[5]
     sunshine_min = [s / 60.0 for s in sunshine]
     ax6.bar(times, sunshine_min, width=BAR_W, color=SUN_C, alpha=0.85, zorder=3, align="center")
     ax6.set_ylim(0, 65)
     style_ax(ax6, "Sunshine\n[min/h]", SUN_C)
+    ax6.spines["top"].set_visible(False)
+    ax6.xaxis.set_major_formatter(mticker.FuncFormatter(hour_fmt_with_day))
     ax6.set_xlabel("Zeit  (UTC+1 / CET)", color=DIM, fontsize=7.5)
 
-    # Clamp x-axis to exact data range — no automatic matplotlib padding
-    axes[0].set_xlim(times[0], times[-1])
+    # Clamp x-axis — set on top panel of each pair; sharex propagates to the bottom panel
+    for _ax in [ax1, ax3, ax5]:
+        _ax.set_xlim(times[0], times[-1])
 
     fig.patch.set_facecolor(BG)
     # rect=[left, bottom, right, top] — 10 % left margin creates an empty side panel
