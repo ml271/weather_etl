@@ -25,6 +25,30 @@
     <div class="header-right">
       <div class="status-dot" id="statusDot"></div>
       <span class="last-updated" id="lastUpdated">Verbinde...</span>
+
+      <!-- User menu -->
+      <div class="user-menu-wrap">
+        <button class="user-menu-btn" id="userMenuBtn" title="Anmelden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          </svg>
+          <span class="user-online-dot"></span>
+        </button>
+        <div class="user-panel" id="userPanel">
+          <div class="user-panel-header">
+            <div class="user-panel-username" id="userPanelUsername"></div>
+            <div class="user-panel-email" id="userPanelEmail"></div>
+          </div>
+          <div class="user-panel-section">
+            <div class="user-panel-section-label">AKTIVE WARNUNGEN</div>
+            <div class="user-panel-empty">Noch keine Warnungen konfiguriert.<br/>Warning-Baukasten folgt in Kürze.</div>
+          </div>
+          <div class="user-panel-footer">
+            <button class="user-panel-btn danger" onclick="userLogout()">ABMELDEN</button>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -99,5 +123,6 @@
   </div>
 
   <script src="js/app.js"></script>
+  <script src="js/user-menu.js"></script>
 </body>
 </html>

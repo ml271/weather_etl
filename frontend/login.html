@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login – Weather Data Visualisation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      width: 100%;
+      max-width: 420px;
+      padding: 40px;
+    }
+
+    .login-logo {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .14em;
+      color: var(--accent);
+      margin-bottom: 28px;
+    }
+
+    .tab-row {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 10px 0;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .1em;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color .2s, border-color .2s;
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .form-group input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .form-group input:focus {
+      border-color: var(--accent);
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      color: #080c12;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .1em;
+      font-weight: 700;
+      padding: 12px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity .2s;
+    }
+    .submit-btn:hover   { opacity: .85; }
+    .submit-btn:disabled { opacity: .4; cursor: default; }
+
+    .msg {
+      margin-top: 16px;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      display: none;
+    }
+    .msg.error   { background: rgba(255,74,106,.08); border: 1px solid var(--danger); color: var(--danger); }
+    .msg.success { background: rgba(74,223,184,.08); border: 1px solid var(--info);   color: var(--info); }
+    .msg.visible { display: block; }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      text-decoration: none;
+      letter-spacing: .06em;
+    }
+    .back-link:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">WEATHER DATA VISUALISATION</div>
+
+    <div class="tab-row">
+      <button class="tab-btn active" id="tabLogin"    onclick="switchTab('login')">LOGIN</button>
+      <button class="tab-btn"        id="tabRegister" onclick="switchTab('register')">REGISTRIEREN</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>BENUTZERNAME</label>
+        <input type="text" id="loginUsername" autocomplete="username" required />
+      </div>
+      <div class="form-group">
+        <label>PASSWORT</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="submit-btn" id="loginBtn">ANMELDEN</button>
+    </form>
+
+    <!-- REGISTER FORM -->
+    <form id="registerForm" style="display:none" onsubmit="handleRegister(event)">
+      <div class="form-group">
+        <label>BENUTZERNAME</label>
+        <input type="text" id="regUsername" autocomplete="username" required />
+      </div>
+      <div class="form-group">
+        <label>E-MAIL</label>
+        <input type="email" id="regEmail" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label>PASSWORT</label>
+        <input type="password" id="regPassword" autocomplete="new-password" required minlength="6" />
+      </div>
+      <button type="submit" class="submit-btn" id="registerBtn">KONTO ERSTELLEN</button>
+    </form>
+
+    <div class="msg" id="msg"></div>
+    <a href="index.html" class="back-link">← Zurück zur Startseite</a>
+  </div>
+</div>
+
+<script>
+  const API = "/api";
+
+  function switchTab(tab) {
+    const isLogin = tab === "login";
+    document.getElementById("loginForm").style.display    = isLogin ? "" : "none";
+    document.getElementById("registerForm").style.display = isLogin ? "none" : "";
+    document.getElementById("tabLogin").classList.toggle("active", isLogin);
+    document.getElementById("tabRegister").classList.toggle("active", !isLogin);
+    clearMsg();
+  }
+
+  function showMsg(text, type) {
+    const el = document.getElementById("msg");
+    el.textContent = text;
+    el.className = `msg ${type} visible`;
+  }
+
+  function clearMsg() {
+    const el = document.getElementById("msg");
+    el.className = "msg";
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById("loginBtn");
+    btn.disabled = true;
+    clearMsg();
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: document.getElementById("loginUsername").value.trim(),
+          password: document.getElementById("loginPassword").value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Login fehlgeschlagen");
+      localStorage.setItem("token", data.access_token);
+      showMsg("Anmeldung erfolgreich – wird weitergeleitet …", "success");
+      setTimeout(() => { window.location.href = "index.html"; }, 800);
+    } catch (err) {
+      showMsg(err.message, "error");
+      btn.disabled = false;
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    const btn = document.getElementById("registerBtn");
+    btn.disabled = true;
+    clearMsg();
+    try {
+      const res = await fetch(`${API}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: document.getElementById("regUsername").value.trim(),
+          email:    document.getElementById("regEmail").value.trim(),
+          password: document.getElementById("regPassword").value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Registrierung fehlgeschlagen");
+      showMsg(`Konto für „${data.username}" erstellt – bitte jetzt anmelden.`, "success");
+      setTimeout(() => switchTab("login"), 1500);
+    } catch (err) {
+      showMsg(err.message, "error");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

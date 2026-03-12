@@ -97,6 +97,79 @@ body {
   display: flex; align-items: center; gap: 0.6rem;
 }
 
+/* ── User Menu ── */
+.user-menu-wrap { position: relative; }
+
+.user-menu-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  width: 34px; height: 34px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  transition: border-color .2s, color .2s;
+}
+.user-menu-btn:hover { border-color: var(--border-bright); color: var(--text); }
+.user-menu-btn.logged-in { border-color: rgba(74,223,184,.35); color: var(--info); }
+.user-menu-btn svg { width: 17px; height: 17px; }
+
+.user-online-dot {
+  position: absolute; top: -3px; right: -3px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--info);
+  box-shadow: 0 0 6px var(--info);
+  display: none;
+}
+.user-menu-btn.logged-in .user-online-dot { display: block; }
+
+.user-panel {
+  position: absolute; top: calc(100% + 10px); right: 0;
+  width: 240px;
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  z-index: 200;
+  display: none;
+}
+.user-panel.open { display: block; }
+
+.user-panel-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.user-panel-username {
+  font-family: var(--font-mono); font-size: 13px;
+  color: var(--text); font-weight: 700; margin-bottom: 3px;
+}
+.user-panel-email { font-size: 11px; color: var(--text-dim); }
+
+.user-panel-section {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.user-panel-section-label {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: .12em; color: var(--accent); margin-bottom: 7px;
+}
+.user-panel-empty { font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+
+.user-panel-footer { padding: 10px 16px; display: flex; flex-direction: column; gap: 7px; }
+
+.user-panel-btn {
+  background: none; border: 1px solid var(--border);
+  color: var(--text-dim); font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: .08em;
+  padding: 7px 10px; cursor: pointer; text-align: left;
+  transition: border-color .2s, color .2s;
+}
+.user-panel-btn:hover { border-color: var(--border-bright); color: var(--text); }
+.user-panel-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+/* Fixed user-menu for pages without a header (index) */
+.user-menu-fixed {
+  position: fixed; top: 1rem; right: 1.5rem; z-index: 100;
+}
+
 .status-dot {
   width: 8px; height: 8px; border-radius: 50%;
   background: var(--text-muted);

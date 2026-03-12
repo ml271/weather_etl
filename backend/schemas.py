@@ -103,6 +103,27 @@ class WeatherAlertSchema(BaseModel):
     created_at:    Optional[datetime] = None
 
 
+class RegisterRequest(BaseModel):
+    email:    str
+    username: str
+    password: str
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type:   str = "bearer"
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id:         int
+    email:      str
+    username:   str
+    created_at: Optional[datetime] = None
+
+
 class ForecastSummary(BaseModel):
     city:          str
     today:         Optional[WeatherDailySchema] = None

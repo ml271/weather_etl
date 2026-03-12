@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS weather_hourly (
     wind_speed          DECIMAL(6, 2),    -- km/h
     wind_direction      INTEGER,          -- degrees
     humidity            INTEGER,          -- %
-    sunshine_duration   DECIMAL(6,2),    -- seconds per hour
+    sunshine_duration   DECIMAL(6,2),     -- seconds per hour
     weather_code        INTEGER,          -- WMO code
     is_day              BOOLEAN,
     created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -158,6 +158,16 @@ INSERT INTO stations (name, region, country, lat, lon) VALUES
     ('Genf',            'Genf',                'Switzerland', 46.204391,  6.143158),
     ('Lausanne',        'Waadt',               'Switzerland', 46.519654,  6.632273)
 ON CONFLICT DO NOTHING;
+
+-- Users (auth)
+CREATE TABLE IF NOT EXISTS users (
+    id              SERIAL PRIMARY KEY,
+    email           VARCHAR(255) UNIQUE NOT NULL,
+    username        VARCHAR(100) UNIQUE NOT NULL,
+    hashed_password VARCHAR(255) NOT NULL,
+    is_active       BOOLEAN DEFAULT TRUE,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_weather_daily_city_date ON weather_daily(city, forecast_date);

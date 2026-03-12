@@ -22,9 +22,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, text, case
 
 from database import get_db, engine
-from models import WeatherDaily, WeatherHourly, WeatherAlert, Base
+from models import WeatherDaily, WeatherHourly, WeatherAlert
 from schemas import WeatherDailySchema, WeatherHourlySchema, WeatherAlertSchema, ForecastSummary
-from routers import stations, weather_fetch
+from routers import stations, weather_fetch, auth
 import chart_cache
 
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +45,7 @@ app.add_middleware(
 
 app.include_router(stations.router)
 app.include_router(weather_fetch.router)
+app.include_router(auth.router)
 
 DEFAULT_CITY = os.getenv("DEFAULT_CITY", "Freiburg")
 
