@@ -1,7 +1,7 @@
 """
 Models – SQLAlchemy ORM Modelle (spiegeln das DB-Schema aus init.sql)
 """
-from sqlalchemy import Column, Integer, String, Numeric, Boolean, Date, DateTime, Text
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, Date, DateTime, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from database import Base
@@ -43,6 +43,12 @@ class WeatherHourly(Base):
     sunshine_duration  = Column(Numeric(6, 2))   # seconds per hour
     weather_code       = Column(Integer)
     is_day        = Column(Boolean)
+    soil_temperature_0cm  = Column(Numeric(5, 2))   # °C surface
+    soil_temperature_6cm  = Column(Numeric(5, 2))   # °C shallow
+    soil_temperature_18cm = Column(Numeric(5, 2))   # °C mid
+    soil_moisture_0_1cm   = Column(Numeric(8, 6))   # m³/m³
+    soil_moisture_1_3cm   = Column(Numeric(8, 6))   # m³/m³
+    soil_moisture_3_9cm   = Column(Numeric(8, 6))   # m³/m³
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -66,6 +72,30 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     is_active       = Column(Boolean, default=True)
     created_at      = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class WarningTemplate(Base):
+    __tablename__ = "warning_templates"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    name        = Column(String(100), nullable=False)
+    description = Column(Text)
+    conditions  = Column(JSONB, nullable=False)
+
+
+class Warning(Base):
+    __tablename__ = "warnings"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    user_id     = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    station_id  = Column(Integer, ForeignKey("stations.id", ondelete="SET NULL"), nullable=True)
+    city        = Column(String(100), nullable=False)
+    name        = Column(String(100), nullable=False)
+    conditions  = Column(JSONB, nullable=False)
+    validity    = Column(JSONB, nullable=False)
+    active      = Column(Boolean, default=True)
+    created_at  = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at  = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class WeatherAlert(Base):

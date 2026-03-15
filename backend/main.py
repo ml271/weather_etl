@@ -24,7 +24,7 @@ from sqlalchemy import desc, func, text, case
 from database import get_db, engine
 from models import WeatherDaily, WeatherHourly, WeatherAlert
 from schemas import WeatherDailySchema, WeatherHourlySchema, WeatherAlertSchema, ForecastSummary
-from routers import stations, weather_fetch, auth
+from routers import stations, weather_fetch, auth, warnings
 import chart_cache
 
 logging.basicConfig(level=logging.INFO)
@@ -46,8 +46,17 @@ app.add_middleware(
 app.include_router(stations.router)
 app.include_router(weather_fetch.router)
 app.include_router(auth.router)
+app.include_router(warnings.router)
 
 DEFAULT_CITY = os.getenv("DEFAULT_CITY", "Freiburg")
+
+
+# ── Cache Management ──────────────────────────────────
+
+@app.post("/charts/cache-clear", tags=["Charts"])
+def clear_chart_cache(city: str = Query(...)):
+    chart_cache.invalidate(city)
+    return {"status": "ok", "city": city}
 
 
 # ── Health Check ──────────────────────────────────────
@@ -401,8 +410,6 @@ def get_day_detail_plot(
     _ax1_top.tick_params(axis="x", which="minor", length=0, labeltop=False)
     _ax1_top.spines["top"].set_visible(False)
 
-    ax1.legend(loc="upper right", fontsize=7.5,
-               facecolor=BG, edgecolor=GRID_C, labelcolor=TEXT, framealpha=0.9)
     ax1.set_title(
         f"{city.upper()}  ·  {title_day.upper()},  {title_date}",
         color=TEXT, fontsize=9, fontfamily="monospace", loc="left", pad=52,
@@ -472,6 +479,8 @@ def get_day_detail_plot(
 def get_hourly_plot(
     city: str = Query(default=None),
     hours: int = Query(default=96, ge=6, le=168),
+    soil_t: str = Query(default="0,6,18"),      # comma-sep depths to show: 0 / 6 / 18
+    soil_m: str = Query(default="0-1,1-3,3-9"), # comma-sep depths: 0-1 / 1-3 / 3-9
     db: Session = Depends(get_db),
 ):
     from datetime import timedelta
@@ -479,7 +488,9 @@ def get_hourly_plot(
     city = city or DEFAULT_CITY
 
     # ── Cache check ──────────────────────────────────────
-    cache_key = f"{city}:hourly:{hours}"
+    show_st = set(soil_t.split(","))   # e.g. {"0", "6", "18"}
+    show_sm = set(soil_m.split(","))   # e.g. {"0-1", "1-3", "3-9"}
+    cache_key = f"{city}:hourly:{hours}:st{','.join(sorted(show_st))}:sm{','.join(sorted(show_sm))}"
     cached = chart_cache.get(cache_key)
     if cached:
         return Response(content=cached, media_type="image/png",
@@ -518,6 +529,12 @@ def get_hourly_plot(
     wd       = [float(r.wind_direction)    if r.wind_direction   is not None else 0.0    for r in records]
     precip   = [float(r.precipitation)     if r.precipitation    is not None else 0.0    for r in records]
     sunshine = [float(r.sunshine_duration) if r.sunshine_duration is not None else 0.0   for r in records]
+    s_t0  = [float(r.soil_temperature_0cm)  if getattr(r, "soil_temperature_0cm",  None) is not None else np.nan for r in records]
+    s_t6  = [float(r.soil_temperature_6cm)  if getattr(r, "soil_temperature_6cm",  None) is not None else np.nan for r in records]
+    s_t18 = [float(r.soil_temperature_18cm) if getattr(r, "soil_temperature_18cm", None) is not None else np.nan for r in records]
+    s_m01 = [float(r.soil_moisture_0_1cm)   if getattr(r, "soil_moisture_0_1cm",   None) is not None else np.nan for r in records]
+    s_m13 = [float(r.soil_moisture_1_3cm)   if getattr(r, "soil_moisture_1_3cm",   None) is not None else np.nan for r in records]
+    s_m39 = [float(r.soil_moisture_3_9cm)   if getattr(r, "soil_moisture_3_9cm",   None) is not None else np.nan for r in records]
 
     # Daily max/min dots placed at noon local time
     d_noon_max, d_temp_max = [], []
@@ -546,7 +563,13 @@ def get_hourly_plot(
     PRECIP  = "#4a9eff"
     SUN_C   = "#ffd950"
     DOT_MAX = "#ff5566"
-    DOT_MIN = "#4ad4ff"
+    DOT_MIN  = "#4ad4ff"
+    SOIL_T0  = "#e8a05c"   # surface soil temp (warm sandy)
+    SOIL_T6  = "#c07830"   # shallow soil temp (earth)
+    SOIL_T18 = "#8b5520"   # mid soil temp (deep earth)
+    SOIL_M0  = "#5bb8f5"   # surface moisture (light blue)
+    SOIL_M1  = "#3a8cc4"   # shallow moisture
+    SOIL_M3  = "#1e5f8a"   # deeper moisture
 
     BAR_W = 0.8 / 24.0   # 0.8 h in matplotlib date units (days)
 
@@ -558,22 +581,26 @@ def get_hourly_plot(
             midnights.append(md)
             md += timedelta(days=1)
 
-    # Nested GridSpec: 3 paired groups, zero space within each pair, normal gap between pairs.
+    # Nested GridSpec: 4 paired groups, small space within each pair, normal gap between pairs.
     # Pair 1 → ax1 (Temp) + ax2 (Humidity)
     # Pair 2 → ax3 (Wind speed) + ax4 (Wind direction)
     # Pair 3 → ax5 (Precipitation) + ax6 (Sunshine)
-    fig = plt.figure(figsize=(8, 6), facecolor=BG)
-    _outer = mgs.GridSpec(3, 1, figure=fig, hspace=0.22)
+    # Pair 4 → ax7 (Soil Temperature) + ax8 (Soil Moisture)
+    fig = plt.figure(figsize=(8, 8), facecolor=BG)
+    _outer = mgs.GridSpec(4, 1, figure=fig, hspace=0.22)
     _p1 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[0], hspace=0.2, height_ratios=[3, 2])
     _p2 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[1], hspace=0.2, height_ratios=[2.5, 0.7])
     _p3 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[2], hspace=0.2, height_ratios=[1.5, 1.5])
+    _p4 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[3], hspace=0.2, height_ratios=[1.5, 1.5])
     ax1 = fig.add_subplot(_p1[0])
     ax2 = fig.add_subplot(_p1[1], sharex=ax1)
     ax3 = fig.add_subplot(_p2[0])
     ax4 = fig.add_subplot(_p2[1], sharex=ax3)
     ax5 = fig.add_subplot(_p3[0])
     ax6 = fig.add_subplot(_p3[1], sharex=ax5)
-    axes = [ax1, ax2, ax3, ax4, ax5, ax6]
+    ax7 = fig.add_subplot(_p4[0])
+    ax8 = fig.add_subplot(_p4[1], sharex=ax7)
+    axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8]
 
     _WD_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -655,8 +682,6 @@ def get_hourly_plot(
     _ax1_top.tick_params(axis="x", which="minor", length=0, labeltop=False)
     _ax1_top.spines["top"].set_visible(False)
 
-    ax1.legend(loc="upper right", fontsize=7.5,
-               facecolor=BG, edgecolor=GRID_C, labelcolor=TEXT, framealpha=0.9)
     ax1.set_title(
         f"{city.upper()}  ·  {hours}h  FORECAST  (CET)",
         color=TEXT, fontsize=9, fontfamily="monospace", loc="left", pad=52,
@@ -707,11 +732,48 @@ def get_hourly_plot(
     ax6.set_ylim(0, 65)
     style_ax(ax6, "Sunshine\n[min/h]", SUN_C)
     ax6.spines["top"].set_visible(False)
-    ax6.xaxis.set_major_formatter(mticker.FuncFormatter(hour_fmt_with_day))
-    ax6.set_xlabel("Zeit  (UTC+1 / CET)", color=DIM, fontsize=7.5)
+    # Pair 3 bottom: no day labels here — they will appear on ax8 (bottom of chart)
+    ax6.tick_params(axis="x", labelbottom=False)
+
+    # ── Panel 7: Soil Temperature (filtered by show_st) ──
+    _has_soil_t = not all(np.isnan(v) for v in s_t0)
+    if _has_soil_t:
+        if "0" in show_st:
+            ax7.plot(times, s_t0,  color=SOIL_T0,  linewidth=1.5, zorder=3)
+            ax7.fill_between(times, s_t0, alpha=0.05, color=SOIL_T0, zorder=2)
+        if "6" in show_st:
+            ax7.plot(times, s_t6,  color=SOIL_T6,  linewidth=1.5, zorder=3)
+        if "18" in show_st:
+            ax7.plot(times, s_t18, color=SOIL_T18, linewidth=1.5, zorder=3)
+    style_ax(ax7, "Bodentemp\n[°C]", SOIL_T0)
+    ax7.tick_params(axis="x", labelbottom=False)
+    ax7.spines["bottom"].set_visible(False)
+    if not _has_soil_t:
+        ax7.text(0.5, 0.5, "Bodendaten verfügbar nach\nnächstem Datenabruf",
+                 transform=ax7.transAxes, ha="center", va="center",
+                 color=DIM, fontsize=7, fontfamily="monospace")
+
+    # ── Panel 8: Soil Moisture (filtered by show_sm) ─────
+    _has_soil_m = not all(np.isnan(v) for v in s_m01)
+    if _has_soil_m:
+        if "0-1" in show_sm:
+            ax8.plot(times, s_m01, color=SOIL_M0, linewidth=1.5, zorder=3)
+            ax8.fill_between(times, s_m01, alpha=0.06, color=SOIL_M0, zorder=2)
+        if "1-3" in show_sm:
+            ax8.plot(times, s_m13, color=SOIL_M1, linewidth=1.5, zorder=3)
+        if "3-9" in show_sm:
+            ax8.plot(times, s_m39, color=SOIL_M3, linewidth=1.5, zorder=3)
+    style_ax(ax8, "Bodenfeuchte\n[m³/m³]", SOIL_M0)
+    ax8.spines["top"].set_visible(False)
+    ax8.xaxis.set_major_formatter(mticker.FuncFormatter(hour_fmt_with_day))
+    ax8.set_xlabel("Zeit  (UTC+1 / CET)", color=DIM, fontsize=7.5)
+    if not _has_soil_m:
+        ax8.text(0.5, 0.5, "Bodendaten verfügbar nach\nnächstem Datenabruf",
+                 transform=ax8.transAxes, ha="center", va="center",
+                 color=DIM, fontsize=7, fontfamily="monospace")
 
     # Clamp x-axis — set on top panel of each pair; sharex propagates to the bottom panel
-    for _ax in [ax1, ax3, ax5]:
+    for _ax in [ax1, ax3, ax5, ax7]:
         _ax.set_xlim(times[0], times[-1])
 
     fig.patch.set_facecolor(BG)

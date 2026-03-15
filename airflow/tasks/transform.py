@@ -116,8 +116,14 @@ def transform_hourly(city: str, hourly: dict) -> list[dict]:
             "wind_direction": safe_get(hourly.get("wind_direction_10m"), i),
             "humidity":           safe_get(hourly.get("relative_humidity_2m"), i),
             "sunshine_duration":  safe_get(hourly.get("sunshine_duration"), i, 0.0),
-            "weather_code":       safe_get(hourly.get("weather_code"), i),
-            "is_day":             bool(safe_get(hourly.get("is_day"), i, 1)),
+            "weather_code":           safe_get(hourly.get("weather_code"), i),
+            "is_day":                 bool(safe_get(hourly.get("is_day"), i, 1)),
+            "soil_temperature_0cm":   safe_get(hourly.get("soil_temperature_0cm"), i),
+            "soil_temperature_6cm":   safe_get(hourly.get("soil_temperature_6cm"), i),
+            "soil_temperature_18cm":  safe_get(hourly.get("soil_temperature_18cm"), i),
+            "soil_moisture_0_1cm":    safe_get(hourly.get("soil_moisture_0_to_1cm"), i),
+            "soil_moisture_1_3cm":    safe_get(hourly.get("soil_moisture_1_to_3cm"), i),
+            "soil_moisture_3_9cm":    safe_get(hourly.get("soil_moisture_3_to_9cm"), i),
         }
         records.append(record)
 

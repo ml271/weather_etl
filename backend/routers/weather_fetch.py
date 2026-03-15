@@ -28,6 +28,8 @@ HOURLY_VARIABLES = [
     "temperature_2m", "apparent_temperature", "precipitation",
     "rain", "snowfall", "wind_speed_10m", "wind_direction_10m",
     "relative_humidity_2m", "sunshine_duration", "weather_code", "is_day",
+    "soil_temperature_0cm", "soil_temperature_6cm", "soil_temperature_18cm",
+    "soil_moisture_0_to_1cm", "soil_moisture_1_to_3cm", "soil_moisture_3_to_9cm",
 ]
 
 
@@ -113,28 +115,38 @@ def _store(city: str, lat: float, lon: float, api: dict, db: Session):
             precipitation, rain, snowfall,
             wind_speed, wind_direction,
             humidity, sunshine_duration,
-            weather_code, is_day
+            weather_code, is_day,
+            soil_temperature_0cm, soil_temperature_6cm, soil_temperature_18cm,
+            soil_moisture_0_1cm, soil_moisture_1_3cm, soil_moisture_3_9cm
         ) VALUES (
             :city, :forecast_time,
             :temperature, :feels_like,
             :precipitation, :rain, :snowfall,
             :wind_speed, :wind_direction,
             :humidity, :sunshine_duration,
-            :weather_code, :is_day
+            :weather_code, :is_day,
+            :soil_temperature_0cm, :soil_temperature_6cm, :soil_temperature_18cm,
+            :soil_moisture_0_1cm, :soil_moisture_1_3cm, :soil_moisture_3_9cm
         )
         ON CONFLICT (city, forecast_time) DO UPDATE SET
-            temperature       = EXCLUDED.temperature,
-            feels_like        = EXCLUDED.feels_like,
-            precipitation     = EXCLUDED.precipitation,
-            rain              = EXCLUDED.rain,
-            snowfall          = EXCLUDED.snowfall,
-            wind_speed        = EXCLUDED.wind_speed,
-            wind_direction    = EXCLUDED.wind_direction,
-            humidity          = EXCLUDED.humidity,
-            sunshine_duration = EXCLUDED.sunshine_duration,
-            weather_code      = EXCLUDED.weather_code,
-            is_day            = EXCLUDED.is_day,
-            created_at        = NOW()
+            temperature           = EXCLUDED.temperature,
+            feels_like            = EXCLUDED.feels_like,
+            precipitation         = EXCLUDED.precipitation,
+            rain                  = EXCLUDED.rain,
+            snowfall              = EXCLUDED.snowfall,
+            wind_speed            = EXCLUDED.wind_speed,
+            wind_direction        = EXCLUDED.wind_direction,
+            humidity              = EXCLUDED.humidity,
+            sunshine_duration     = EXCLUDED.sunshine_duration,
+            weather_code          = EXCLUDED.weather_code,
+            is_day                = EXCLUDED.is_day,
+            soil_temperature_0cm  = EXCLUDED.soil_temperature_0cm,
+            soil_temperature_6cm  = EXCLUDED.soil_temperature_6cm,
+            soil_temperature_18cm = EXCLUDED.soil_temperature_18cm,
+            soil_moisture_0_1cm   = EXCLUDED.soil_moisture_0_1cm,
+            soil_moisture_1_3cm   = EXCLUDED.soil_moisture_1_3cm,
+            soil_moisture_3_9cm   = EXCLUDED.soil_moisture_3_9cm,
+            created_at            = NOW()
     """)
 
     for i, time_str in enumerate(hourly.get("time", [])):
@@ -149,9 +161,15 @@ def _store(city: str, lat: float, lon: float, api: dict, db: Session):
             "wind_speed":         _safe(hourly.get("wind_speed_10m"), i),
             "wind_direction":     _safe(hourly.get("wind_direction_10m"), i),
             "humidity":           _safe(hourly.get("relative_humidity_2m"), i),
-            "sunshine_duration":  _safe(hourly.get("sunshine_duration"), i, 0.0),
-            "weather_code":       _safe(hourly.get("weather_code"), i),
-            "is_day":             bool(_safe(hourly.get("is_day"), i, 1)),
+            "sunshine_duration":    _safe(hourly.get("sunshine_duration"), i, 0.0),
+            "weather_code":         _safe(hourly.get("weather_code"), i),
+            "is_day":               bool(_safe(hourly.get("is_day"), i, 1)),
+            "soil_temperature_0cm":  _safe(hourly.get("soil_temperature_0cm"), i),
+            "soil_temperature_6cm":  _safe(hourly.get("soil_temperature_6cm"), i),
+            "soil_temperature_18cm": _safe(hourly.get("soil_temperature_18cm"), i),
+            "soil_moisture_0_1cm":   _safe(hourly.get("soil_moisture_0_to_1cm"), i),
+            "soil_moisture_1_3cm":   _safe(hourly.get("soil_moisture_1_to_3cm"), i),
+            "soil_moisture_3_9cm":   _safe(hourly.get("soil_moisture_3_to_9cm"), i),
         })
 
     # Deactivate old alerts (no alert config in backend – Airflow handles those)

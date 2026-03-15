@@ -32,6 +32,24 @@ const SEVERITY_ICONS = { danger:"🚨", warning:"⚠️", info:"ℹ️" };
 const WEEKDAYS = ["SO","MO","DI","MI","DO","FR","SA"];
 
 let currentPlotHours = 96;
+let selectedSoilT = new Set(["0"]);
+let selectedSoilM = new Set(["0-1"]);
+
+window.toggleSoilDepth = function(type, depth) {
+  const set = type === "T" ? selectedSoilT : selectedSoilM;
+  if (set.has(depth)) {
+    if (set.size > 1) set.delete(depth); // keep at least one selected
+  } else {
+    set.add(depth);
+  }
+  // Update button visual state
+  document.querySelectorAll(`.legend-btn[data-type="${type}"]`).forEach(btn => {
+    const on = set.has(btn.dataset.depth);
+    btn.classList.toggle("active", on);
+    btn.classList.toggle("inactive", !on);
+  });
+  loadHourlyPlot(currentPlotHours);
+};
 
 // ─────────────────────────────────────────────────────
 // Utilities
@@ -195,9 +213,13 @@ function loadHourlyPlot(hours) {
   const loading = document.getElementById("hourlyPlotLoading");
 
   img.classList.remove("loaded");
+  img.src = "";  // clear first so browser always fires onload for the new src
   loading.style.display = "block";
+  loading.textContent = "Lade Diagramm...";
 
-  const url = `${API}${apiPath(`/charts/hourly-plot?hours=${hours}`)}&_t=${Date.now()}`;
+  const soilT = [...selectedSoilT].sort().join(",");
+  const soilM = [...selectedSoilM].sort().join(",");
+  const url = `${API}${apiPath(`/charts/hourly-plot?hours=${hours}`)}&soil_t=${encodeURIComponent(soilT)}&soil_m=${encodeURIComponent(soilM)}&_t=${Date.now()}`;
 
   img.onload = () => {
     loading.style.display = "none";
@@ -264,26 +286,36 @@ async function loadForecast() {
 async function init() {
   updateForecastRange();
 
-  // If we have coords, check first whether data exists – if not, fetch before rendering
+  // If we have coords, check first whether data exists / is fresh – if not, fetch before rendering
   if (CITY && LAT != null && LON != null) {
+    let needsFetch = false;
     try {
       await apiFetch(apiPath("/forecast/daily?days=1"));
-    } catch (e) {
-      if (e.message.includes("404")) {
-        // Show loading state on both panels while fetching
-        document.getElementById("forecastRow").innerHTML =
-          `<div class="forecast-loading">⏳ Wetterdaten für ${CITY} werden geladen …</div>`;
-        const plotLoading = document.getElementById("hourlyPlotLoading");
-        plotLoading.style.display = "block";
-        plotLoading.textContent = "⏳ Wetterdaten werden geladen …";
-        try {
-          await fetchWeatherNow();
-        } catch (fetchErr) {
-          document.getElementById("forecastRow").innerHTML =
-            `<div class="forecast-loading">Fehler beim Laden – bitte Seite neu laden.</div>`;
-          plotLoading.textContent = "Fehler beim Laden.";
-          return;
+      // Data exists — check staleness (re-fetch if last update > 6 hours ago)
+      try {
+        const summary = await apiFetch(apiPath("/summary"));
+        const lu = summary.last_updated ? new Date(summary.last_updated) : null;
+        if (!lu || (Date.now() - lu.getTime()) > 6 * 3600 * 1000) {
+          needsFetch = true;
         }
+      } catch (_) { /* ignore summary errors, proceed with cached data */ }
+    } catch (e) {
+      if (e.message.includes("404")) needsFetch = true;
+    }
+
+    if (needsFetch) {
+      document.getElementById("forecastRow").innerHTML =
+        `<div class="forecast-loading">⏳ Wetterdaten für ${CITY} werden geladen …</div>`;
+      const plotLoading = document.getElementById("hourlyPlotLoading");
+      plotLoading.style.display = "block";
+      plotLoading.textContent = "⏳ Wetterdaten werden geladen …";
+      try {
+        await fetchWeatherNow();
+      } catch (fetchErr) {
+        document.getElementById("forecastRow").innerHTML =
+          `<div class="forecast-loading">Fehler beim Laden – bitte Seite neu laden.</div>`;
+        plotLoading.textContent = "Fehler beim Laden.";
+        return;
       }
     }
   }

@@ -259,6 +259,87 @@ body {
   min-height: 0;
 }
 
+/* ── Right Legend Panel ── */
+.legend-panel {
+  width: 130px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  padding: 1.4rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 57px);
+  overflow-y: auto;
+}
+
+.legend-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.legend-group-title {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  margin-bottom: 0.2rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.legend-divider {
+  height: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* Clickable depth toggle buttons */
+.legend-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.3rem 0.4rem;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-align: left;
+  transition: background 0.15s, opacity 0.2s;
+}
+.legend-btn:hover { background: var(--surface-2); }
+.legend-btn.inactive {
+  opacity: 0.28;
+}
+.legend-btn.inactive .legend-swatch {
+  filter: grayscale(0.8);
+}
+
 .sidebar .alerts-list {
   flex-wrap: nowrap;
   flex-direction: column;
@@ -278,7 +359,6 @@ body {
   gap: 1px;
   background: var(--border);
   align-content: start;
-  padding-right: 6rem;
 }
 
 /* ── Cards ── */

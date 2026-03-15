@@ -147,6 +147,7 @@ eine Airflow task soll einmal alle 1 oder 2 stunden die selben Daten abfragen wi
 - Navigation: Landing Page → Dashboard → Login → Baukasten
 - Nginx Routing prüfen
 - End-to-End Test: Warning konfigurieren → Airflow triggern → Mail prüfen
+- sicherheits checken up
 - README aktualisieren
 
 ---

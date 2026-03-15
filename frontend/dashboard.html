@@ -42,7 +42,10 @@
           </div>
           <div class="user-panel-section">
             <div class="user-panel-section-label">AKTIVE WARNUNGEN</div>
-            <div class="user-panel-empty">Noch keine Warnungen konfiguriert.<br/>Warning-Baukasten folgt in Kürze.</div>
+            <div id="userPanelWarnings" style="margin-bottom:.4rem;">
+              <div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);">Lädt…</div>
+            </div>
+            <a href="warnings.html" style="font-size:10px;font-family:var(--font-mono);color:var(--accent);text-decoration:none;letter-spacing:.08em;">+ NEUE WARNUNG</a>
           </div>
           <div class="user-panel-footer">
             <button class="user-panel-btn danger" onclick="userLogout()">ABMELDEN</button>
@@ -55,10 +58,10 @@
   <!-- ░░ ALERT BANNER ░░ -->
   <div class="alert-banner" id="alertBanner" style="display:none"></div>
 
-  <!-- ░░ LAYOUT: SIDEBAR + MAIN ░░ -->
+  <!-- ░░ LAYOUT: SIDEBAR + MAIN + LEGEND ░░ -->
   <div class="dashboard-layout">
 
-    <!-- ░░ SIDEBAR ░░ -->
+    <!-- ░░ LEFT SIDEBAR ░░ -->
     <aside class="sidebar">
       <a href="index.html" class="back-link">← SUCHE</a>
 
@@ -105,6 +108,51 @@
       </section>
 
     </main>
+
+    <!-- ░░ RIGHT LEGEND PANEL ░░ -->
+    <aside class="legend-panel">
+      <div class="card-label">LEGENDE</div>
+
+      <div class="legend-group">
+        <div class="legend-group-title">TEMPERATUR</div>
+        <div class="legend-item">
+          <span class="legend-swatch" style="background:#ff5566;border-radius:50%;width:8px;height:8px"></span>Tagesmax
+        </div>
+        <div class="legend-item">
+          <span class="legend-swatch" style="background:#4ad4ff;border-radius:50%;width:8px;height:8px"></span>Tagesmin
+        </div>
+      </div>
+
+      <div class="legend-divider"></div>
+
+      <div class="legend-group">
+        <div class="legend-group-title">BODENTEMPERATUR</div>
+        <button class="legend-btn active" data-type="T" data-depth="0" onclick="toggleSoilDepth('T','0')">
+          <span class="legend-swatch" style="background:#e8a05c"></span><span>0 cm</span>
+        </button>
+        <button class="legend-btn inactive" data-type="T" data-depth="6" onclick="toggleSoilDepth('T','6')">
+          <span class="legend-swatch" style="background:#c07830"></span><span>6 cm</span>
+        </button>
+        <button class="legend-btn inactive" data-type="T" data-depth="18" onclick="toggleSoilDepth('T','18')">
+          <span class="legend-swatch" style="background:#8b5520"></span><span>18 cm</span>
+        </button>
+      </div>
+
+      <div class="legend-divider"></div>
+
+      <div class="legend-group">
+        <div class="legend-group-title">BODENFEUCHTE</div>
+        <button class="legend-btn active" data-type="M" data-depth="0-1" onclick="toggleSoilDepth('M','0-1')">
+          <span class="legend-swatch" style="background:#5bb8f5"></span><span>0–1 cm</span>
+        </button>
+        <button class="legend-btn inactive" data-type="M" data-depth="1-3" onclick="toggleSoilDepth('M','1-3')">
+          <span class="legend-swatch" style="background:#3a8cc4"></span><span>1–3 cm</span>
+        </button>
+        <button class="legend-btn inactive" data-type="M" data-depth="3-9" onclick="toggleSoilDepth('M','3-9')">
+          <span class="legend-swatch" style="background:#1e5f8a"></span><span>3–9 cm</span>
+        </button>
+      </div>
+    </aside>
 
   </div>
 

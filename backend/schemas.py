@@ -124,6 +124,48 @@ class UserOut(BaseModel):
     created_at: Optional[datetime] = None
 
 
+# ── Warning schemas ──────────────────────────────────────────────────────────
+
+class ConditionRule(BaseModel):
+    parameter:  str           # e.g. "temperature_max"
+    comparator: str           # ">", "<", ">=", "<=", "=="
+    value:      float
+    label:      Optional[str] = None   # human-readable label
+
+class WarningTemplateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id:          int
+    name:        str
+    description: Optional[str] = None
+    conditions:  list[ConditionRule]
+
+class ValiditySpec(BaseModel):
+    type:      str                        # "date_range" | "weekdays" | "months"
+    date_from: Optional[str] = None      # ISO date string for date_range
+    date_to:   Optional[str] = None
+    weekdays:  Optional[list[int]] = None   # 0=Mon … 6=Sun
+    months:    Optional[list[int]] = None   # 1=Jan … 12=Dec
+
+class WarningCreate(BaseModel):
+    station_id: Optional[int] = None
+    city:       str
+    name:       str
+    conditions: list[ConditionRule]
+    validity:   ValiditySpec
+
+class WarningOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id:         int
+    station_id: Optional[int] = None
+    city:       str
+    name:       str
+    conditions: Any
+    validity:   Any
+    active:     bool
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
 class ForecastSummary(BaseModel):
     city:          str
     today:         Optional[WeatherDailySchema] = None

@@ -23,6 +23,11 @@ x-airflow-common: &airflow-common
     DEFAULT_CITY: ${DEFAULT_CITY}
     DEFAULT_LATITUDE: ${DEFAULT_LATITUDE}
     DEFAULT_LONGITUDE: ${DEFAULT_LONGITUDE}
+    SMTP_HOST: ${SMTP_HOST:-mailhog}
+    SMTP_PORT: ${SMTP_PORT:-1025}
+    SMTP_USER: ${SMTP_USER:-}
+    SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+    SMTP_FROM: ${SMTP_FROM:-weather-etl@local.dev}
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/tasks:/opt/airflow/tasks
@@ -138,6 +143,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────
+  # Mailhog (SMTP catch-all für lokale Entwicklung)
+  # ─────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: weather_mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
     restart: unless-stopped
 
   # ─────────────────────────────────────────

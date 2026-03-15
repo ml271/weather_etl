@@ -37,6 +37,12 @@ HOURLY_VARIABLES = [
     "sunshine_duration",
     "weather_code",
     "is_day",
+    "soil_temperature_0cm",
+    "soil_temperature_6cm",
+    "soil_temperature_18cm",
+    "soil_moisture_0_to_1cm",
+    "soil_moisture_1_to_3cm",
+    "soil_moisture_3_to_9cm",
 ]
 
 

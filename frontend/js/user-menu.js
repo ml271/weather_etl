@@ -29,6 +29,9 @@ async function initUserMenu() {
     btn.title = user.username;
     _populatePanel(user);
     btn.addEventListener("click", _togglePanel);
+
+    // Load warnings in background
+    _loadWarnings(token);
   } catch {
     localStorage.removeItem("token");
     btn.title = "Anmelden";
@@ -40,6 +43,31 @@ function _populatePanel(user) {
   const el = (id) => document.getElementById(id);
   if (el("userPanelUsername")) el("userPanelUsername").textContent = user.username;
   if (el("userPanelEmail"))    el("userPanelEmail").textContent    = user.email;
+}
+
+async function _loadWarnings(token) {
+  const container = document.getElementById("userPanelWarnings");
+  if (!container) return;
+  try {
+    const res = await fetch(`${_UMAPI}/warnings/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const warnings = await res.json();
+    if (!warnings.length) {
+      container.innerHTML = '<div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);">Noch keine Warnungen.</div>';
+    } else {
+      container.innerHTML = warnings.map(w => `
+        <div onclick="window.location.href='warnings.html?edit=${w.id}'"
+             style="padding:.35rem .5rem;font-size:11px;cursor:pointer;border:1px solid var(--border);
+                    margin-bottom:.3rem;display:flex;align-items:center;gap:.4rem;"
+             onmouseover="this.style.borderColor='var(--accent)'"
+             onmouseout="this.style.borderColor='var(--border)'">
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.name}</span>
+          <span style="font-size:10px;color:var(--text-dim);">${w.city}</span>
+        </div>`).join("");
+    }
+  } catch { /* silent */ }
 }
 
 function _togglePanel() {

@@ -4,6 +4,7 @@ Load Task – Transformierte Wetterdaten in PostgreSQL schreiben
 import os
 import json
 import logging
+import requests
 import psycopg2
 import psycopg2.extras
 from datetime import datetime, timezone
@@ -87,28 +88,38 @@ def load_hourly(cursor, records: list[dict]):
             precipitation, rain, snowfall,
             wind_speed, wind_direction,
             humidity, sunshine_duration,
-            weather_code, is_day
+            weather_code, is_day,
+            soil_temperature_0cm, soil_temperature_6cm, soil_temperature_18cm,
+            soil_moisture_0_1cm, soil_moisture_1_3cm, soil_moisture_3_9cm
         ) VALUES (
             %(city)s, %(forecast_time)s,
             %(temperature)s, %(feels_like)s,
             %(precipitation)s, %(rain)s, %(snowfall)s,
             %(wind_speed)s, %(wind_direction)s,
             %(humidity)s, %(sunshine_duration)s,
-            %(weather_code)s, %(is_day)s
+            %(weather_code)s, %(is_day)s,
+            %(soil_temperature_0cm)s, %(soil_temperature_6cm)s, %(soil_temperature_18cm)s,
+            %(soil_moisture_0_1cm)s, %(soil_moisture_1_3cm)s, %(soil_moisture_3_9cm)s
         )
         ON CONFLICT (city, forecast_time) DO UPDATE SET
-            temperature        = EXCLUDED.temperature,
-            feels_like         = EXCLUDED.feels_like,
-            precipitation      = EXCLUDED.precipitation,
-            rain               = EXCLUDED.rain,
-            snowfall           = EXCLUDED.snowfall,
-            wind_speed         = EXCLUDED.wind_speed,
-            wind_direction     = EXCLUDED.wind_direction,
-            humidity           = EXCLUDED.humidity,
-            sunshine_duration  = EXCLUDED.sunshine_duration,
-            weather_code       = EXCLUDED.weather_code,
-            is_day             = EXCLUDED.is_day,
-            created_at         = NOW()
+            temperature           = EXCLUDED.temperature,
+            feels_like            = EXCLUDED.feels_like,
+            precipitation         = EXCLUDED.precipitation,
+            rain                  = EXCLUDED.rain,
+            snowfall              = EXCLUDED.snowfall,
+            wind_speed            = EXCLUDED.wind_speed,
+            wind_direction        = EXCLUDED.wind_direction,
+            humidity              = EXCLUDED.humidity,
+            sunshine_duration     = EXCLUDED.sunshine_duration,
+            weather_code          = EXCLUDED.weather_code,
+            is_day                = EXCLUDED.is_day,
+            soil_temperature_0cm  = EXCLUDED.soil_temperature_0cm,
+            soil_temperature_6cm  = EXCLUDED.soil_temperature_6cm,
+            soil_temperature_18cm = EXCLUDED.soil_temperature_18cm,
+            soil_moisture_0_1cm   = EXCLUDED.soil_moisture_0_1cm,
+            soil_moisture_1_3cm   = EXCLUDED.soil_moisture_1_3cm,
+            soil_moisture_3_9cm   = EXCLUDED.soil_moisture_3_9cm,
+            created_at            = NOW()
     """
     psycopg2.extras.execute_batch(cursor, sql, records)
     logger.info(f"Upserted {len(records)} hourly records")
@@ -191,3 +202,14 @@ def load(**context):
         raise
     finally:
         conn.close()
+
+    # Invalidate chart cache so the next request regenerates fresh charts
+    try:
+        requests.post(
+            "http://backend:8000/charts/cache-clear",
+            params={"city": city},
+            timeout=5,
+        )
+        logger.info(f"Chart cache cleared for {city}")
+    except Exception as e:
+        logger.warning(f"Chart cache clear failed (non-critical): {e}")
