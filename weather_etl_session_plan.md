@@ -84,17 +84,27 @@ Landing Page (Stationssuche)
 
 **Ziel:** User kann eigene Wetter-Warnings konfigurieren.
 
+Weather Alerts sollen für jeden user einfach anzulegen sein dafür muss er eine bedingung mit einem wetter-parameter verknüpfen, einen ort und einen Zeitraum (intervall oder sich wiedeholendes Interval) angeben.
+
 **UI-Aufbau (3-spaltig)**
 
 | Links | Mitte | Rechts |
 |---|---|---|
 | Station / Ort / Gebiet wählen (Suchfeld oder Dropdown) | Wetter-Parameter wählen (Niederschlag, Temperatur, Wind, …) + Bedingung definieren (z.B. Temperatur > 32) + AND / AND NOT Verknüpfung | Zeitliche Gültigkeit (von / bis) |
+Die zeitlich gültigkiet soll erst mal eine Art Kalender veranschaulicht sein.
+Es soll die möglichkeit geben, die zeitlich gültigkiet auch auf Wochentage ( beispiel Warining: schönes wochenende: Samstag und Sonntag über 20 grad und kein Regen) oder auf Monate zu beschränken (Bsp. Schneefall im Januar und Februar über 20 cm) oder auf ein klassisches Start und End-Datum (Bsp. 12-03-2026 bis 30-04-2027) festzulegen.
+Beim Abspeichern soll noch nach einem namen für die weather warning gefragt werden und die alters für den user gespeichert werden und im user panel angezeigt werden.
+Ein click im user Panel auf die warnings soll wieder die Konfiguration ui öffen mit den gespeicherten parametern der warning.Es soll die möglichkeit geben waring auch wieder zu löschen.
 
 **Vorkonfigurierte Warnings (Templates)**
+Beispiele für die Bedigungen der Wetter-Parameter in der mitte der ui
+
 - Hitzwarnung (Temperatur > 32°C)
 - Frostwarnung (Temperatur < 0°C)
 - Starkregen (Niederschlag > 20mm/h)
 - Sturmwarnung (Windgeschwindigkeit > 60 km/h)
+- Schneefallwarnung ( Schneefall > 10 cm)
+
 
 **FastAPI Endpoints**
 - `GET /warnings/templates` – vorkonfigurierte Warnings
@@ -107,12 +117,22 @@ Landing Page (Stationssuche)
 ### Session 4 – Airflow Warning-Check DAG + Mail
 
 **Ziel:** Automatische Prüfung und Mail-Benachrichtigung.
+eine Airflow task soll einmal alle 1 oder 2 stunden die selben Daten abfragen wie die Wetterdiagramme auf dem dashboard und die Bedingungen prüfen.
+
+
 
 **Neuer Airflow DAG:** `check_weather_warnings`
-- Läuft stündlich
+- Läuft stündlich oder zwei stündlich
 - Holt aktuelle Wetterdaten pro Station
 - Prüft gegen alle aktiven User-Warnings
 - Triggert Mail wenn Bedingung erfüllt
+
+
+**Meine Bedenken**
+- Es könnten zu viel API-Calls auf der open meteo seite generiert werden.
+- Es könnten sich unmengen an Wetterdaten in der Datenbank ansammeln
+- Es könnte sehr lange dauert bis alle Bedingungen überprüft werden.
+- Es kommt wahrscheinlich sehr auf die menge der user an, sagen wir jeder User legt 3 warnings im schnitt an oder wir limitieren es auf 10 Warnings pro User. Wie viele user könnte unsere Infrastrucktur dann verkraften? nur so als grobe Schätzung!
 
 **Mail-Setup**
 - SMTP via Python (`smtplib`) oder Mailgun
