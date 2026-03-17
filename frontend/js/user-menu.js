@@ -13,7 +13,10 @@ async function initUserMenu() {
   const token = localStorage.getItem("token");
   if (!token) {
     btn.title = "Anmelden";
-    btn.addEventListener("click", () => { window.location.href = "login.html"; });
+    btn.addEventListener("click", () => {
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = "login.html?next=" + next;
+    });
     return;
   }
 
@@ -35,7 +38,10 @@ async function initUserMenu() {
   } catch {
     localStorage.removeItem("token");
     btn.title = "Anmelden";
-    btn.addEventListener("click", () => { window.location.href = "login.html"; });
+    btn.addEventListener("click", () => {
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = "login.html?next=" + next;
+    });
   }
 }
 

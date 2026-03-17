@@ -12,7 +12,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: ${AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION}
     AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES}
     AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
-    AIRFLOW__WEBSERVER__SECRET_KEY: "weather-etl-secret-key-change-in-prod"
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY:-weather-etl-secret-key-change-in-prod}
     AIRFLOW__WEBSERVER__WEB_SERVER_MASTER_TIMEOUT: "300"
     AIRFLOW__WEBSERVER__WORKER_REFRESH_BATCH_SIZE: "1"
     POSTGRES_USER: ${POSTGRES_USER}
@@ -135,6 +135,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PORT: ${POSTGRES_PORT}
+      SECRET_KEY: ${SECRET_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost,http://localhost:80}
     ports:
       - "8000:8000"
     volumes:

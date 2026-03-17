@@ -214,7 +214,10 @@
       if (!res.ok) throw new Error(data.detail || "Login fehlgeschlagen");
       localStorage.setItem("token", data.access_token);
       showMsg("Anmeldung erfolgreich – wird weitergeleitet …", "success");
-      setTimeout(() => { window.location.href = "index.html"; }, 800);
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next");
+      const safeNext = (next && next.startsWith("/")) ? next : "index.html";
+      setTimeout(() => { window.location.href = safeNext; }, 800);
     } catch (err) {
       showMsg(err.message, "error");
       btn.disabled = false;

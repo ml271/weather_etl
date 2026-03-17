@@ -1,0 +1,22 @@
+# Production override – use with:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Removes internal port exposure so only port 80 (Nginx) is public.
+# Airflow (8080), Mailhog (8025/1025) and PostgreSQL (5432) stay
+# internal to the Docker network and are not reachable from outside.
+
+services:
+
+  postgres:
+    ports: []   # remove 5432 exposure
+
+  airflow-webserver:
+    ports: []   # remove 8080 exposure
+
+  mailhog:
+    ports:
+      - "127.0.0.1:1025:1025"   # SMTP only on loopback (for Brevo relay if needed)
+      # Web UI (8025) intentionally not exposed in production
+
+  backend:
+    ports: []   # remove 8000 exposure – only reachable via Nginx proxy

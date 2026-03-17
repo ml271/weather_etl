@@ -7,6 +7,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <!-- Theme Loader: reads active theme from localStorage and injects CSS -->
+  <script>
+    (function(){
+      var t = localStorage.getItem('weather_etl_theme');
+      if (t && /^theme-[a-z]+$/.test(t)) {
+        var l = document.createElement('link');
+        l.rel = 'stylesheet'; l.href = 'css/' + t + '.css';
+        document.currentScript.insertAdjacentElement('afterend', l);
+      }
+    })();
+  </script>
 </head>
 <body>
 
