@@ -1,9 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(*)",
-      "Edit(*)",
-      "Write(*)",
       "Read(*)",
       "Glob(*)",
       "Grep(*)",
@@ -14,7 +11,11 @@
       "Bash(docker compose up -d backend frontend)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8000/charts/hourly-plot?hours=72\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8000/charts/hourly-plot?hours=96\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8000/charts/hourly-plot\")"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8000/charts/hourly-plot\")",
+      "Bash(docker compose:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\admin\\.claude\\projects\\d--weather-etl"
     ]
   }
 }

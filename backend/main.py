@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Weather ETL API",
-    description="REST API für die Weather ETL Pipeline",
+    description="REST API for the Weather ETL Pipeline",
     version="1.0.0",
 )
 
@@ -151,7 +151,7 @@ def get_daily_forecast(
     if not records:
         raise HTTPException(
             status_code=404,
-            detail=f"Keine Daten für '{city}'. Bitte zuerst den Airflow DAG triggern.",
+            detail=f"No data for '{city}'. Please trigger the Airflow DAG first.",
         )
 
     return [WeatherDailySchema.model_validate(r) for r in records]
@@ -177,7 +177,7 @@ def get_hourly_forecast(
     )
 
     if not records:
-        raise HTTPException(status_code=404, detail=f"Keine stündlichen Daten für '{city}'.")
+        raise HTTPException(status_code=404, detail=f"No hourly data for '{city}'.")
 
     return [WeatherHourlySchema.model_validate(r) for r in records]
 
@@ -233,7 +233,7 @@ def get_temperature_chart_data(
         .all()
     )
     if not records:
-        raise HTTPException(status_code=404, detail=f"Keine Daten für '{city}'.")
+        raise HTTPException(status_code=404, detail=f"No data for '{city}'.")
     return {
         "city": city,
         "labels": [str(r.forecast_date) for r in records],
@@ -309,7 +309,7 @@ def get_day_detail_plot(
     )
 
     if not records:
-        raise HTTPException(status_code=404, detail=f"Keine Stundendaten für {date_str}.")
+        raise HTTPException(status_code=404, detail=f"No hourly data for {date_str}.")
 
     daily = (
         db.query(WeatherDaily)
@@ -363,7 +363,7 @@ def get_day_detail_plot(
     fig, axes = plt.subplots(
         6, 1,
         figsize=(8, 6),
-        gridspec_kw={"height_ratios": [3, 2, 2.5, 0.7, 1.5, 1.5], "hspace": 0.58},
+        gridspec_kw={"height_ratios": [4, 2, 2.5, 0.7, 1.5, 1.5], "hspace": 0.58},
         sharex=True,
         facecolor=BG,
     )
@@ -389,12 +389,13 @@ def get_day_detail_plot(
     ax1 = axes[0]
     ax1.plot(times, temp, color=WARM, linewidth=1.8, zorder=3)
     ax1.fill_between(times, temp, alpha=0.07, color=WARM, zorder=2)
+    ax1.axhline(0, color=DIM, linewidth=0.8, linestyle="--", alpha=0.6, zorder=2)
     if d_noon_max:
         ax1.scatter(d_noon_max, d_temp_max, color=DOT_MAX, s=55, zorder=5,
-                    edgecolors="white", linewidths=0.6, label="Tagesmax")
+                    edgecolors="white", linewidths=0.6, label="Daily max")
     if d_noon_min:
         ax1.scatter(d_noon_min, d_temp_min, color=DOT_MIN, s=55, zorder=5,
-                    edgecolors="white", linewidths=0.6, label="Tagesmin")
+                    edgecolors="white", linewidths=0.6, label="Daily min")
     style_ax(ax1, "Temp  [°C]", WARM)
     ax1.tick_params(axis="x", top=True, labeltop=False, which="major", length=6, color=DIM)
     ax1.tick_params(axis="x", top=True, which="minor", length=3, color=DIM)
@@ -456,7 +457,7 @@ def get_day_detail_plot(
     ax6.bar(times, [s / 60.0 for s in sunshine], width=BAR_W, color=SUN_C, alpha=0.85, zorder=3, align="center")
     ax6.set_ylim(0, 65)
     style_ax(ax6, "Sunshine\n[min/h]", SUN_C)
-    ax6.set_xlabel("Zeit  (UTC+1 / CET)", color=DIM, fontsize=7.5)
+    ax6.set_xlabel("Time  (UTC+1 / CET)", color=DIM, fontsize=7.5)
 
     axes[0].set_xlim(times[0], times[-1])
     fig.patch.set_facecolor(BG)
@@ -497,18 +498,25 @@ def get_hourly_plot(
     if cached:
         return Response(content=cached, media_type="image/png",
                         headers={"Cache-Control": "no-cache, max-age=0", "X-Cache": "HIT"})
-    now  = datetime.now(timezone.utc)
+
+    from datetime import timedelta as _td
+    _CET = _td(hours=1)
+    _now_utc = datetime.now(timezone.utc)
+    # Start chart at 00:00 CET of the current day
+    _today_cet = (_now_utc + _CET).date()
+    _midnight_utc = datetime(_today_cet.year, _today_cet.month, _today_cet.day,
+                             tzinfo=timezone.utc) - _CET
 
     records = (
         db.query(WeatherHourly)
-        .filter(WeatherHourly.city == city, WeatherHourly.forecast_time >= now)
+        .filter(WeatherHourly.city == city, WeatherHourly.forecast_time >= _midnight_utc)
         .order_by(WeatherHourly.forecast_time.asc())
         .limit(hours)
         .all()
     )
 
     if not records:
-        raise HTTPException(status_code=404, detail=f"Keine stündlichen Daten für '{city}'.")
+        raise HTTPException(status_code=404, detail=f"No hourly data for '{city}'.")
 
     # Daily records for max/min scatter dots
     daily_records = (
@@ -590,7 +598,7 @@ def get_hourly_plot(
     # Pair 4 → ax7 (Soil Temperature) + ax8 (Soil Moisture)
     fig = plt.figure(figsize=(8, 8), facecolor=BG)
     _outer = mgs.GridSpec(4, 1, figure=fig, hspace=0.22)
-    _p1 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[0], hspace=0.2, height_ratios=[3, 2])
+    _p1 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[0], hspace=0.2, height_ratios=[4, 2])
     _p2 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[1], hspace=0.2, height_ratios=[2.5, 0.7])
     _p3 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[2], hspace=0.2, height_ratios=[1.5, 1.5])
     _p4 = mgs.GridSpecFromSubplotSpec(2, 1, subplot_spec=_outer[3], hspace=0.2, height_ratios=[1.5, 1.5])
@@ -650,6 +658,7 @@ def get_hourly_plot(
     # ── Panel 1: Temperature ──────────────────────────────
     ax1.plot(times, temp, color=WARM, linewidth=1.8, zorder=3)
     ax1.fill_between(times, temp, alpha=0.07, color=WARM, zorder=2)
+    ax1.axhline(0, color=DIM, linewidth=0.8, linestyle="--", alpha=0.6, zorder=2)
     if d_noon_max:
         ax1.scatter(d_noon_max, d_temp_max, color=DOT_MAX, s=25, zorder=5,
                     edgecolors="black", linewidths=0.2, label="Temp. max")
@@ -747,11 +756,11 @@ def get_hourly_plot(
             ax7.plot(times, s_t6,  color=SOIL_T6,  linewidth=1.5, zorder=3)
         if "18" in show_st:
             ax7.plot(times, s_t18, color=SOIL_T18, linewidth=1.5, zorder=3)
-    style_ax(ax7, "Bodentemp\n[°C]", SOIL_T0)
+    style_ax(ax7, "Soil Temp\n[°C]", SOIL_T0)
     ax7.tick_params(axis="x", labelbottom=False)
     ax7.spines["bottom"].set_visible(False)
     if not _has_soil_t:
-        ax7.text(0.5, 0.5, "Bodendaten verfügbar nach\nnächstem Datenabruf",
+        ax7.text(0.5, 0.5, "Soil data available after\nnext ETL run",
                  transform=ax7.transAxes, ha="center", va="center",
                  color=DIM, fontsize=7, fontfamily="monospace")
 
@@ -765,12 +774,12 @@ def get_hourly_plot(
             ax8.plot(times, s_m13, color=SOIL_M1, linewidth=1.5, zorder=3)
         if "3-9" in show_sm:
             ax8.plot(times, s_m39, color=SOIL_M3, linewidth=1.5, zorder=3)
-    style_ax(ax8, "Bodenfeuchte\n[m³/m³]", SOIL_M0)
+    style_ax(ax8, "Soil Moist.\n[m³/m³]", SOIL_M0)
     ax8.spines["top"].set_visible(False)
     ax8.xaxis.set_major_formatter(mticker.FuncFormatter(hour_fmt_with_day))
-    ax8.set_xlabel("Zeit  (UTC+1 / CET)", color=DIM, fontsize=7.5)
+    ax8.set_xlabel("Time  (UTC+1 / CET)", color=DIM, fontsize=7.5)
     if not _has_soil_m:
-        ax8.text(0.5, 0.5, "Bodendaten verfügbar nach\nnächstem Datenabruf",
+        ax8.text(0.5, 0.5, "Soil data available after\nnext ETL run",
                  transform=ax8.transAxes, ha="center", va="center",
                  color=DIM, fontsize=7, fontfamily="monospace")
 

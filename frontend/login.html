@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -135,26 +135,26 @@
 
     <div class="tab-row">
       <button class="tab-btn active" id="tabLogin"    onclick="switchTab('login')">LOGIN</button>
-      <button class="tab-btn"        id="tabRegister" onclick="switchTab('register')">REGISTRIEREN</button>
+      <button class="tab-btn"        id="tabRegister" onclick="switchTab('register')">REGISTER</button>
     </div>
 
     <!-- LOGIN FORM -->
     <form id="loginForm" onsubmit="handleLogin(event)">
       <div class="form-group">
-        <label>BENUTZERNAME</label>
+        <label>USERNAME</label>
         <input type="text" id="loginUsername" autocomplete="username" required />
       </div>
       <div class="form-group">
-        <label>PASSWORT</label>
+        <label>PASSWORD</label>
         <input type="password" id="loginPassword" autocomplete="current-password" required />
       </div>
-      <button type="submit" class="submit-btn" id="loginBtn">ANMELDEN</button>
+      <button type="submit" class="submit-btn" id="loginBtn">SIGN IN</button>
     </form>
 
     <!-- REGISTER FORM -->
     <form id="registerForm" style="display:none" onsubmit="handleRegister(event)">
       <div class="form-group">
-        <label>BENUTZERNAME</label>
+        <label>USERNAME</label>
         <input type="text" id="regUsername" autocomplete="username" required />
       </div>
       <div class="form-group">
@@ -162,14 +162,14 @@
         <input type="email" id="regEmail" autocomplete="email" required />
       </div>
       <div class="form-group">
-        <label>PASSWORT</label>
+        <label>PASSWORD</label>
         <input type="password" id="regPassword" autocomplete="new-password" required minlength="6" />
       </div>
-      <button type="submit" class="submit-btn" id="registerBtn">KONTO ERSTELLEN</button>
+      <button type="submit" class="submit-btn" id="registerBtn">CREATE ACCOUNT</button>
     </form>
 
     <div class="msg" id="msg"></div>
-    <a href="index.html" class="back-link">← Zurück zur Startseite</a>
+    <a href="index.html" class="back-link">← Back to Home</a>
   </div>
 </div>
 
@@ -211,9 +211,9 @@
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Login fehlgeschlagen");
+      if (!res.ok) throw new Error(data.detail || "Login failed");
       localStorage.setItem("token", data.access_token);
-      showMsg("Anmeldung erfolgreich – wird weitergeleitet …", "success");
+      showMsg("Login successful – redirecting …", "success");
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
       const safeNext = (next && next.startsWith("/")) ? next : "index.html";
@@ -240,8 +240,8 @@
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Registrierung fehlgeschlagen");
-      showMsg(`Konto für „${data.username}" erstellt – bitte jetzt anmelden.`, "success");
+      if (!res.ok) throw new Error(data.detail || "Registration failed");
+      showMsg(`Account for "${data.username}" created – please sign in now.`, "success");
       setTimeout(() => switchTab("login"), 1500);
     } catch (err) {
       showMsg(err.message, "error");

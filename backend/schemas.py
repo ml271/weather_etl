@@ -1,5 +1,5 @@
 """
-Schemas – Pydantic Modelle für Response Serialisierung
+Schemas – Pydantic models for response serialization
 """
 from datetime import date, datetime
 from decimal import Decimal
@@ -7,16 +7,16 @@ from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, computed_field
 
 WMO_CODES = {
-    0: "Klarer Himmel",
-    1: "Überwiegend klar", 2: "Teilweise bewölkt", 3: "Bedeckt",
-    45: "Nebel", 48: "Reifnebel",
-    51: "Leichter Nieselregen", 53: "Mäßiger Nieselregen", 55: "Starker Nieselregen",
-    61: "Leichter Regen", 63: "Mäßiger Regen", 65: "Starker Regen",
-    71: "Leichter Schneefall", 73: "Mäßiger Schneefall", 75: "Starker Schneefall",
-    77: "Schneekörner",
-    80: "Leichte Regenschauer", 81: "Mäßige Regenschauer", 82: "Starke Regenschauer",
-    85: "Leichte Schneeschauer", 86: "Starke Schneeschauer",
-    95: "Gewitter", 96: "Gewitter mit leichtem Hagel", 99: "Gewitter mit starkem Hagel",
+    0: "Clear sky",
+    1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Depositing rime fog",
+    51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
+    61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
+    71: "Slight snowfall", 73: "Moderate snowfall", 75: "Heavy snowfall",
+    77: "Snow grains",
+    80: "Slight rain showers", 81: "Moderate rain showers", 82: "Violent rain showers",
+    85: "Slight snow showers", 86: "Heavy snow showers",
+    95: "Thunderstorm", 96: "Thunderstorm with slight hail", 99: "Thunderstorm with heavy hail",
 }
 
 WMO_ICONS = {
@@ -52,7 +52,7 @@ class WeatherDailySchema(BaseModel):
     @computed_field
     @property
     def weather_description(self) -> str:
-        return WMO_CODES.get(self.weather_code, "Unbekannt")
+        return WMO_CODES.get(self.weather_code, "Unknown")
 
     @computed_field
     @property
@@ -81,7 +81,7 @@ class WeatherHourlySchema(BaseModel):
     @computed_field
     @property
     def weather_description(self) -> str:
-        return WMO_CODES.get(self.weather_code, "Unbekannt")
+        return WMO_CODES.get(self.weather_code, "Unknown")
 
     @computed_field
     @property
@@ -145,6 +145,8 @@ class ValiditySpec(BaseModel):
     date_to:   Optional[str] = None
     weekdays:  Optional[list[int]] = None   # 0=Mon … 6=Sun
     months:    Optional[list[int]] = None   # 1=Jan … 12=Dec
+    notify_offset_type:  Optional[str] = None   # "same_day" | "days_before" | "hours_before"
+    notify_offset_value: Optional[int] = None   # X for days_before / hours_before
 
 class WarningCreate(BaseModel):
     station_id: Optional[int] = None

@@ -4,7 +4,7 @@
 
 const API = "/api";   // Nginx proxy → backend:8000
 
-// City / coords from URL params (?city=München&lat=48.13&lon=11.58)
+// City / coords from URL params (?city=Berlin&lat=52.52&lon=13.40)
 const _params = new URLSearchParams(window.location.search);
 const CITY = _params.get("city") || null;
 const LAT  = _params.get("lat")  ? parseFloat(_params.get("lat"))  : null;
@@ -29,7 +29,7 @@ const WMO_ICONS = {
 };
 
 const SEVERITY_ICONS = { danger:"🚨", warning:"⚠️", info:"ℹ️" };
-const WEEKDAYS = ["SO","MO","DI","MI","DO","FR","SA"];
+const WEEKDAYS = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
 
 let currentPlotHours = 96;
 let selectedSoilT = new Set(["0"]);
@@ -72,7 +72,7 @@ function getIcon(code) {
 function fmtDate(dateStr) {
   if (!dateStr) return "—";
   const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 
 // ─────────────────────────────────────────────────────
@@ -83,8 +83,8 @@ function renderSummary(data) {
   document.getElementById("cityName").textContent = data.city || "—";
   document.getElementById("lastUpdated").textContent =
     data.last_updated
-      ? "SYNC " + new Date(data.last_updated).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
-      : "KEIN SYNC";
+      ? "SYNC " + new Date(data.last_updated).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+      : "NO SYNC";
 
   const dot = document.getElementById("statusDot");
   dot.className = "status-dot " + (data.today ? "online" : "error");
@@ -99,7 +99,7 @@ function renderSummary(data) {
 function updateForecastRange() {
   const now = new Date();
   const end = new Date(now.getTime() + currentPlotHours * 3600 * 1000);
-  const fmt2 = d => d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
+  const fmt2 = d => d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
   document.getElementById("forecastRange").textContent = `${fmt2(now)} – ${fmt2(end)}`;
 }
 
@@ -117,7 +117,7 @@ function renderAlerts(alerts) {
   countEl.dataset.count = count;
 
   if (count === 0) {
-    listEl.innerHTML = `<div class="no-alerts">Keine aktiven Warnungen ✓</div>`;
+    listEl.innerHTML = `<div class="no-alerts">No active warnings ✓</div>`;
     banner.style.display = "none";
     return;
   }
@@ -125,7 +125,7 @@ function renderAlerts(alerts) {
   const dangers = alerts.filter(a => a.severity === "danger");
   if (dangers.length > 0) {
     banner.style.display = "block";
-    banner.textContent = `⚡ ACHTUNG: ${dangers.map(d => d.alert_name).join(" · ")}`;
+    banner.textContent = `⚡ WARNING: ${dangers.map(d => d.alert_name).join(" · ")}`;
   } else {
     banner.style.display = "none";
   }
@@ -158,7 +158,7 @@ function renderForecast(records) {
 
     return `
       <div class="forecast-day ${isToday ? "today" : ""}" onclick="openDayModal('${r.forecast_date}')">
-        <span class="f-weekday">${isToday ? "HEUTE" : weekday}</span>
+        <span class="f-weekday">${isToday ? "TODAY" : weekday}</span>
         <span class="f-icon">${getIcon(r.weather_code)}</span>
         <span class="f-max">${fmt(r.temperature_max, "°")}</span>
         <span class="f-min">${fmt(r.temperature_min, "°")}</span>
@@ -180,18 +180,18 @@ window.openDayModal = function(dateStr) {
   const title   = document.getElementById("modalTitle");
 
   const d  = new Date(dateStr + "T12:00:00");
-  const dayNames = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
-  title.textContent = `${dayNames[d.getDay()].toUpperCase()}  ·  ${d.toLocaleDateString("de-DE", { day:"2-digit", month:"long", year:"numeric" })}`;
+  const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  title.textContent = `${dayNames[d.getDay()].toUpperCase()}  ·  ${d.toLocaleDateString("en-GB", { day:"2-digit", month:"long", year:"numeric" })}`;
 
   img.classList.remove("loaded");
   img.src = "";
   loading.style.display = "block";
-  loading.textContent = "Lade Stundendaten...";
+  loading.textContent = "Loading hourly data...";
   modal.classList.add("open");
   document.body.style.overflow = "hidden";
 
   img.onload  = () => { loading.style.display = "none"; img.classList.add("loaded"); };
-  img.onerror = () => { loading.textContent = "Keine Stundendaten für diesen Tag."; };
+  img.onerror = () => { loading.textContent = "No hourly data available for this day."; };
   img.src = `${API}${apiPath(`/charts/day-detail?date=${dateStr}`)}&_t=${Date.now()}`;
 };
 
@@ -215,7 +215,7 @@ function loadHourlyPlot(hours) {
   img.classList.remove("loaded");
   img.src = "";  // clear first so browser always fires onload for the new src
   loading.style.display = "block";
-  loading.textContent = "Lade Diagramm...";
+  loading.textContent = "Loading chart...";
 
   const soilT = [...selectedSoilT].sort().join(",");
   const soilM = [...selectedSoilM].sort().join(",");
@@ -226,7 +226,7 @@ function loadHourlyPlot(hours) {
     img.classList.add("loaded");
   };
   img.onerror = () => {
-    loading.textContent = "Keine Daten – ETL-Job ausführen!";
+    loading.textContent = "No data – please run the ETL job!";
   };
   img.src = url;
 }
@@ -275,7 +275,7 @@ async function loadForecast() {
     renderForecast(data);
   } catch (e) {
     document.getElementById("forecastRow").innerHTML =
-      `<div class="forecast-loading">Keine Daten – ETL-Job ausführen!</div>`;
+      `<div class="forecast-loading">No data – please run the ETL job!</div>`;
   }
 }
 
@@ -305,16 +305,16 @@ async function init() {
 
     if (needsFetch) {
       document.getElementById("forecastRow").innerHTML =
-        `<div class="forecast-loading">⏳ Wetterdaten für ${CITY} werden geladen …</div>`;
+        `<div class="forecast-loading">⏳ Loading weather data for ${CITY} …</div>`;
       const plotLoading = document.getElementById("hourlyPlotLoading");
       plotLoading.style.display = "block";
-      plotLoading.textContent = "⏳ Wetterdaten werden geladen …";
+      plotLoading.textContent = "⏳ Loading weather data …";
       try {
         await fetchWeatherNow();
       } catch (fetchErr) {
         document.getElementById("forecastRow").innerHTML =
-          `<div class="forecast-loading">Fehler beim Laden – bitte Seite neu laden.</div>`;
-        plotLoading.textContent = "Fehler beim Laden.";
+          `<div class="forecast-loading">Error loading data – please reload the page.</div>`;
+        plotLoading.textContent = "Error loading data.";
         return;
       }
     }
