@@ -1,6 +1,44 @@
 """
-Check Weather Warnings Task – prüft User-Warnungen gegen Vorhersagedaten und sendet Emails.
-Liest ausschließlich aus der DB (keine neuen API-Calls).
+Airflow ETL – Check Weather Warnings Task
+==========================================
+
+Evaluates all active user-defined weather warnings against the current daily
+forecast data and sends HTML email notifications for any new threshold breaches.
+
+This task is read-only with respect to weather data: it never calls the
+Open-Meteo API. It queries the ``weather_daily`` table (populated by the main
+ETL pipeline) and the ``warnings`` / ``users`` tables managed by the FastAPI
+backend.
+
+Notification deduplication:
+  The ``warning_notifications`` table records which (warning_id, forecast_date)
+  pairs have already triggered an email. Before sending, the task checks this
+  table and skips pairs that have already been notified. This guarantees at most
+  one email per user per (warning × forecast_date) combination per warning
+  lifecycle.
+
+Evaluation logic:
+  All conditions in a warning's ``conditions`` list must be simultaneously
+  satisfied (AND logic) for the warning to fire. The validity specification
+  (``validity`` JSONB) determines which calendar dates the warning is active for.
+
+Email format:
+  Emails are rendered as styled HTML using a dark-themed table layout that
+  matches the dashboard aesthetic. They are sent via SMTP (configurable; defaults
+  to the local MailHog catch-all server on port 1025 for development).
+
+Environment variables:
+  POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
+  SMTP_HOST     (default: ``mailhog``)
+  SMTP_PORT     (default: ``1025``)
+  SMTP_USER     (default: empty – no authentication)
+  SMTP_PASSWORD (default: empty)
+  SMTP_FROM     (default: ``weather-etl@local.dev``)
+
+Dependencies:
+  psycopg2-binary, smtplib (standard library)
+
+Author: <project maintainer>
 """
 import os
 import json
@@ -19,6 +57,18 @@ logger = logging.getLogger(__name__)
 # ── DB ────────────────────────────────────────────────────────────────────────
 
 def get_connection():
+    """Create and return a new psycopg2 connection to the PostgreSQL database.
+
+    Connection parameters are read from environment variables with safe
+    fallback defaults that match the Docker Compose configuration.
+
+    Returns:
+        A new, open ``psycopg2.extensions.connection`` object.
+
+    Raises:
+        psycopg2.OperationalError: When the database is unreachable or the
+            credentials are invalid.
+    """
     return psycopg2.connect(
         host=os.getenv("POSTGRES_HOST", "postgres"),
         port=int(os.getenv("POSTGRES_PORT", 5432)),

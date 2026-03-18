@@ -63,15 +63,25 @@ async function _loadWarnings(token) {
     if (!warnings.length) {
       container.innerHTML = '<div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);">Noch keine Warnungen.</div>';
     } else {
-      container.innerHTML = warnings.map(w => `
-        <div onclick="window.location.href='warnings.html?edit=${w.id}'"
-             style="padding:.35rem .5rem;font-size:11px;cursor:pointer;border:1px solid var(--border);
-                    margin-bottom:.3rem;display:flex;align-items:center;gap:.4rem;"
-             onmouseover="this.style.borderColor='var(--accent)'"
-             onmouseout="this.style.borderColor='var(--border)'">
-          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.name}</span>
-          <span style="font-size:10px;color:var(--text-dim);">${w.city}</span>
-        </div>`).join("");
+      container.innerHTML = "";
+      warnings.forEach(w => {
+        const div = document.createElement("div");
+        div.style.cssText = "padding:.35rem .5rem;font-size:11px;cursor:pointer;border:1px solid var(--border);margin-bottom:.3rem;display:flex;align-items:center;gap:.4rem;";
+        div.addEventListener("click", () => { window.location.href = "warnings.html?edit=" + encodeURIComponent(w.id); });
+        div.addEventListener("mouseover", () => { div.style.borderColor = "var(--accent)"; });
+        div.addEventListener("mouseout",  () => { div.style.borderColor = "var(--border)"; });
+
+        const nameSpan = document.createElement("span");
+        nameSpan.style.cssText = "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+        nameSpan.textContent = w.name ?? "";
+
+        const citySpan = document.createElement("span");
+        citySpan.style.cssText = "font-size:10px;color:var(--text-dim);";
+        citySpan.textContent = w.city ?? "";
+
+        div.append(nameSpan, citySpan);
+        container.appendChild(div);
+      });
     }
   } catch { /* silent */ }
 }

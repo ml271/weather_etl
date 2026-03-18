@@ -130,16 +130,35 @@ function renderAlerts(alerts) {
     banner.style.display = "none";
   }
 
-  listEl.innerHTML = alerts.map(a => `
-    <div class="alert-chip ${a.severity}">
-      <span class="chip-icon">${SEVERITY_ICONS[a.severity] ?? "⚡"}</span>
-      <div class="chip-body">
-        <span class="chip-name ${a.severity}">${a.alert_name.toUpperCase()}</span>
-        <span class="chip-msg">${a.message}</span>
-        <span class="chip-date">${a.forecast_date ? "📅 " + a.forecast_date : ""}</span>
-      </div>
-    </div>
-  `).join("");
+  listEl.innerHTML = "";
+  alerts.forEach(a => {
+    const severity = ["danger","warning","info"].includes(a.severity) ? a.severity : "info";
+    const chip = document.createElement("div");
+    chip.className = `alert-chip ${severity}`;
+
+    const icon = document.createElement("span");
+    icon.className = "chip-icon";
+    icon.textContent = SEVERITY_ICONS[severity] ?? "⚡";
+
+    const body = document.createElement("div");
+    body.className = "chip-body";
+
+    const name = document.createElement("span");
+    name.className = `chip-name ${severity}`;
+    name.textContent = (a.alert_name ?? "").toUpperCase();
+
+    const msg = document.createElement("span");
+    msg.className = "chip-msg";
+    msg.textContent = a.message ?? "";
+
+    const dt = document.createElement("span");
+    dt.className = "chip-date";
+    dt.textContent = a.forecast_date ? "📅 " + a.forecast_date : "";
+
+    body.append(name, msg, dt);
+    chip.append(icon, body);
+    listEl.appendChild(chip);
+  });
 }
 
 // ─────────────────────────────────────────────────────
@@ -263,8 +282,13 @@ async function loadSummary() {
 
 async function fetchWeatherNow() {
   if (!CITY || LAT == null || LON == null) return false;
+  const token = localStorage.getItem("token");
+  if (!token) return false;
   const url = `${API}/weather/fetch-now?city=${encodeURIComponent(CITY)}&lat=${LAT}&lon=${LON}`;
-  const res = await fetch(url, { method: "POST" });
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!res.ok) throw new Error(`fetch-now → ${res.status}`);
   return true;
 }

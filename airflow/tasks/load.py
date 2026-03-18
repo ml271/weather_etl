@@ -1,5 +1,36 @@
 """
-Load Task – Transformierte Wetterdaten in PostgreSQL schreiben
+Airflow ETL – Load Task
+========================
+
+Reads transformed weather data from Airflow XCom (produced by the transform
+task) and writes it to the PostgreSQL database in a single atomic transaction.
+
+Tables written (in order):
+  1. ``weather_raw``    – raw API JSON snapshot (one row per pipeline run)
+  2. ``weather_daily``  – daily forecast records (UPSERT on city + date)
+  3. ``weather_hourly`` – hourly forecast records (UPSERT on city + time)
+  4. ``weather_alerts`` – deactivates stale alerts, inserts new ones
+
+All four writes are wrapped in a single psycopg2 transaction (``with conn:``).
+If any write fails the entire transaction is rolled back, leaving the database
+in the state from the previous successful run.
+
+After a successful commit, the load task calls ``POST /charts/cache-clear`` on
+the backend service to evict stale chart PNGs from the in-memory cache. This
+call is non-critical: a failure is logged at WARNING level but does not fail the
+Airflow task.
+
+Environment variables:
+  POSTGRES_HOST      (default: ``postgres``)
+  POSTGRES_PORT      (default: ``5432``)
+  POSTGRES_DB        (default: ``weather_db``)
+  POSTGRES_USER      (default: ``weather_user``)
+  POSTGRES_PASSWORD  (default: ``weather_pass``)
+
+Dependencies:
+  psycopg2-binary, requests
+
+Author: <project maintainer>
 """
 import os
 import json
@@ -13,7 +44,18 @@ logger = logging.getLogger(__name__)
 
 
 def get_connection():
-    """Erstellt eine PostgreSQL-Verbindung aus Umgebungsvariablen."""
+    """Create and return a new psycopg2 connection to the PostgreSQL database.
+
+    Connection parameters are read from environment variables with safe
+    fallback defaults that match the Docker Compose configuration.
+
+    Returns:
+        A new, open ``psycopg2.extensions.connection`` object.
+
+    Raises:
+        psycopg2.OperationalError: When the database is unreachable or the
+            credentials are invalid.
+    """
     return psycopg2.connect(
         host=os.getenv("POSTGRES_HOST", "postgres"),
         port=int(os.getenv("POSTGRES_PORT", 5432)),
@@ -24,7 +66,20 @@ def get_connection():
 
 
 def load_raw(cursor, city: str, latitude: float, longitude: float, raw_json: dict):
-    """Speichert den Roh-API-Response."""
+    """Insert one row into ``weather_raw`` with the full API response snapshot.
+
+    The raw JSON is stored verbatim for auditing and future re-processing
+    without re-fetching from the API. The table has no UNIQUE constraint so
+    every pipeline run creates a new row.
+
+    Args:
+        cursor: An open psycopg2 cursor within an active transaction.
+        city: City name to associate with this snapshot.
+        latitude: Geographic latitude used for the API request.
+        longitude: Geographic longitude used for the API request.
+        raw_json: Full Open-Meteo JSON response as a Python dict. Serialised
+                  to a JSON string before insertion.
+    """
     cursor.execute(
         """
         INSERT INTO weather_raw (city, latitude, longitude, raw_json)
@@ -36,9 +91,25 @@ def load_raw(cursor, city: str, latitude: float, longitude: float, raw_json: dic
 
 
 def load_daily(cursor, records: list[dict]):
-    """
-    Speichert tägliche Wetterdaten – UPSERT (Update bei Konflikt).
-    So bleibt die DB immer mit den aktuellsten Vorhersagedaten.
+    """Upsert a list of daily forecast records into ``weather_daily``.
+
+    Uses ``psycopg2.extras.execute_batch`` to send all rows in a single
+    batched network call for performance. On conflict (same ``city`` and
+    ``forecast_date``) all mutable columns are overwritten with the incoming
+    values and ``created_at`` is reset to ``NOW()``, so repeated runs always
+    reflect the most recent forecast.
+
+    Args:
+        cursor: An open psycopg2 cursor within an active transaction.
+        records: List of daily record dicts as produced by
+                 ``transform.transform_daily()``. Each dict must contain the
+                 keys: ``city``, ``forecast_date``, ``temperature_max``,
+                 ``temperature_min``, ``precipitation_sum``, ``snowfall_sum``,
+                 ``wind_speed_max``, ``wind_gusts_max``, ``weather_code``,
+                 ``uv_index_max``, ``sunrise``, ``sunset``.
+
+    Side effects:
+        Performs no action and returns immediately when ``records`` is empty.
     """
     if not records:
         return
@@ -77,7 +148,27 @@ def load_daily(cursor, records: list[dict]):
 
 
 def load_hourly(cursor, records: list[dict]):
-    """Speichert stündliche Wetterdaten – UPSERT."""
+    """Upsert a list of hourly forecast records into ``weather_hourly``.
+
+    Uses ``psycopg2.extras.execute_batch`` for batched insertion performance.
+    On conflict (same ``city`` and ``forecast_time``) all columns are overwritten
+    with the incoming values.
+
+    Args:
+        cursor: An open psycopg2 cursor within an active transaction.
+        records: List of hourly record dicts as produced by
+                 ``transform.transform_hourly()``. Each dict must contain the
+                 keys: ``city``, ``forecast_time``, ``temperature``,
+                 ``feels_like``, ``precipitation``, ``rain``, ``snowfall``,
+                 ``wind_speed``, ``wind_direction``, ``humidity``,
+                 ``sunshine_duration``, ``weather_code``, ``is_day``,
+                 ``soil_temperature_0cm``, ``soil_temperature_6cm``,
+                 ``soil_temperature_18cm``, ``soil_moisture_0_1cm``,
+                 ``soil_moisture_1_3cm``, ``soil_moisture_3_9cm``.
+
+    Side effects:
+        Performs no action and returns immediately when ``records`` is empty.
+    """
     if not records:
         return
 
@@ -126,12 +217,32 @@ def load_hourly(cursor, records: list[dict]):
 
 
 def load_alerts(cursor, city: str, alerts: list[dict]):
+    """Replace active alerts for a city with the newly generated ones.
+
+    First deactivates all currently active alerts for the city (setting
+    ``is_active = FALSE``), then inserts the new alerts as active rows. This
+    two-step approach ensures that the dashboard always shows only the alerts
+    produced by the most recent pipeline run, without accumulating historical
+    duplicates.
+
+    ``condition_met`` dicts are serialised to JSON strings before insertion
+    because psycopg2 does not automatically convert Python dicts to the
+    PostgreSQL ``JSONB`` type without the ``psycopg2.extras.Json`` adapter.
+
+    Args:
+        cursor: An open psycopg2 cursor within an active transaction.
+        city: City name used to scope the deactivation query.
+        alerts: List of alert dicts as produced by
+                ``transform.generate_alerts()``. Each dict must contain the
+                keys: ``city``, ``alert_name``, ``severity``, ``message``,
+                ``condition_met`` (dict), ``forecast_date``, ``is_active``.
+
+    Side effects:
+        Mutates each dict in ``alerts`` by replacing ``condition_met``
+        (a Python dict) with its JSON string representation. Callers should
+        not reuse the ``alerts`` list after this function returns.
     """
-    Speichert neue Alerts – deaktiviert zuerst alte aktive Alerts
-    für dieselbe Stadt, dann werden die neuen eingefügt.
-    Vermeidet so doppelte Benachrichtigungen.
-    """
-    # Alte Alerts für diese Stadt deaktivieren
+    # Deactivate all currently active alerts for this city before inserting fresh ones
     cursor.execute(
         "UPDATE weather_alerts SET is_active = FALSE WHERE city = %s AND is_active = TRUE",
         (city,),
@@ -167,9 +278,36 @@ def load_alerts(cursor, city: str, alerts: list[dict]):
 # ─────────────────────────────────────────────────────
 
 def load(**context):
-    """
-    Airflow Task Function – liest transformierte Daten aus XCom
-    und schreibt sie in PostgreSQL. Alles in einer Transaktion.
+    """Airflow task entry point for the load step.
+
+    Pulls the transformed weather data from XCom (written by the transform
+    task) and writes all four data types (raw, daily, hourly, alerts) to the
+    PostgreSQL database in a single atomic transaction.
+
+    After a successful commit, signals the backend to invalidate the chart
+    cache via ``POST /charts/cache-clear``. This call is non-critical: a
+    failure is caught, logged, and does not re-raise so the Airflow task is
+    still marked as successful.
+
+    This function is registered as a ``PythonOperator`` callable in
+    ``airflow/dags/weather_dag.py``.
+
+    Args:
+        **context: Airflow task context dict. Must contain ``context["ti"]``
+                   (TaskInstance) to enable XCom pull operations.
+
+    Raises:
+        ValueError: When no transformed weather data is found in XCom from
+            the transform task.
+        Exception: Any database error causes the transaction to roll back
+            automatically (psycopg2 ``with conn:`` context manager) and the
+            exception is re-raised so Airflow can retry the task.
+
+    Side effects:
+        - Pulls ``"transformed_weather"`` from XCom (task_id: ``"transform"``).
+        - Writes to ``weather_raw``, ``weather_daily``, ``weather_hourly``, and
+          ``weather_alerts`` tables in a single transaction.
+        - Calls ``POST http://backend:8000/charts/cache-clear`` (non-critical).
     """
     ti = context["ti"]
     data = ti.xcom_pull(task_ids="transform", key="transformed_weather")
@@ -208,6 +346,7 @@ def load(**context):
         requests.post(
             "http://backend:8000/charts/cache-clear",
             params={"city": city},
+            headers={"X-Internal-Token": os.getenv("INTERNAL_API_TOKEN", "")},
             timeout=5,
         )
         logger.info(f"Chart cache cleared for {city}")

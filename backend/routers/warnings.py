@@ -1,6 +1,36 @@
 """
-Warnings Router – User-defined weather warnings / alerts
+User-Defined Weather Warnings Router – CRUD for ``/warnings/``
+==============================================================
+
+Allows authenticated users to create, read, update, and delete their own
+weather warning rules. These rules are evaluated by the Airflow
+``check_weather_warnings`` DAG every 2 hours, which sends an HTML email
+notification when all conditions in a rule are simultaneously satisfied by the
+daily forecast for the configured city.
+
+Warning ownership:
+  All endpoints (except ``GET /warnings/templates``) require a valid JWT via
+  the ``get_current_user`` dependency. Each user can only read and modify their
+  own warnings; attempting to access another user's warning returns 404 (not
+  403) to avoid leaking information about the existence of other users' data.
+
+Templates:
+  ``GET /warnings/templates`` is public and returns the pre-seeded quick-start
+  templates from the ``warning_templates`` table. The frontend uses these to
+  populate the "Add warning" form with sensible defaults.
+
+JSONB serialisation:
+  ``conditions`` and ``validity`` are stored as JSONB in the database. On
+  write they are serialised from the validated Pydantic models; on read they
+  are returned as raw Python objects (list / dict) via the ``Any``-typed
+  ``WarningOut`` fields.
+
+Dependencies:
+  sqlalchemy, routers.auth (for ``get_current_user``)
+
+Author: <project maintainer>
 """
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -17,16 +47,41 @@ router = APIRouter(prefix="/warnings", tags=["Warnings"])
 
 @router.get("/templates", response_model=list[WarningTemplateOut])
 def get_templates(db: Session = Depends(get_db)):
+    """Return all predefined warning templates.
+
+    Templates are read-only and available to all users (no authentication
+    required). They are seeded at database initialisation time via
+    ``docker/init.sql`` and serve as starting points for creating custom
+    warnings.
+
+    Args:
+        db: SQLAlchemy session injected by FastAPI's dependency system.
+
+    Returns:
+        A list of ``WarningTemplateOut`` objects ordered by ``id`` ascending.
+        Each object contains a ``conditions`` list ready to be cloned into a
+        new warning.
+    """
     return db.query(WarningTemplate).order_by(WarningTemplate.id).all()
 
 
-# ── User warnings ─────────────────────────────────────────────────────────────
+# ── User Warnings ─────────────────────────────────────────────────────────────
 
 @router.get("/", response_model=list[WarningOut])
 def list_warnings(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Return all warnings belonging to the authenticated user.
+
+    Args:
+        current_user: The authenticated user, resolved by ``get_current_user``.
+        db: SQLAlchemy session injected by FastAPI's dependency system.
+
+    Returns:
+        A list of ``WarningOut`` objects for the current user, ordered by
+        ``created_at`` descending (newest first).
+    """
     return (
         db.query(Warning)
         .filter(Warning.user_id == current_user.id)
@@ -41,11 +96,29 @@ def create_warning(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Create a new weather warning for the authenticated user.
+
+    Serialises ``conditions`` (list of ``ConditionRule``) and ``validity``
+    (``ValiditySpec``) from the validated Pydantic model to plain Python
+    dicts before storing them as JSONB. This ensures clean round-trip
+    serialisation without Pydantic metadata.
+
+    Args:
+        body: Warning definition including ``city``, ``name``, ``conditions``,
+              and ``validity``.
+        current_user: The authenticated user, resolved by ``get_current_user``.
+        db: SQLAlchemy session injected by FastAPI's dependency system.
+
+    Returns:
+        The newly created warning as a ``WarningOut`` object with its assigned
+        database ID and timestamps.
+    """
     warning = Warning(
         user_id    = current_user.id,
         station_id = body.station_id,
         city       = body.city,
         name       = body.name,
+        # Dump Pydantic models to plain dicts for JSONB storage
         conditions = [c.model_dump() for c in body.conditions],
         validity   = body.validity.model_dump(),
     )
@@ -61,6 +134,21 @@ def get_warning(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Return a single warning by ID, scoped to the authenticated user.
+
+    Args:
+        warning_id: Database primary key of the warning to retrieve.
+        current_user: The authenticated user, resolved by ``get_current_user``.
+        db: SQLAlchemy session injected by FastAPI's dependency system.
+
+    Returns:
+        The requested warning as a ``WarningOut`` object.
+
+    Raises:
+        HTTPException(404): When the warning does not exist or belongs to a
+            different user. A 404 is returned instead of 403 to avoid
+            disclosing the existence of other users' warnings.
+    """
     w = db.get(Warning, warning_id)
     if not w or w.user_id != current_user.id:
         raise HTTPException(404, "Warning not found")
@@ -74,6 +162,26 @@ def update_warning(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Replace all fields of an existing warning (full update / PUT semantics).
+
+    All warning fields are replaced with the values from ``body``. The
+    ``updated_at`` column is refreshed automatically by the SQLAlchemy
+    ``onupdate`` trigger defined in the ``Warning`` model.
+
+    Args:
+        warning_id: Database primary key of the warning to update.
+        body: New warning definition. All fields are required (PUT semantics;
+              partial updates are not supported).
+        current_user: The authenticated user, resolved by ``get_current_user``.
+        db: SQLAlchemy session injected by FastAPI's dependency system.
+
+    Returns:
+        The updated warning as a ``WarningOut`` object.
+
+    Raises:
+        HTTPException(404): When the warning does not exist or belongs to a
+            different user.
+    """
     w = db.get(Warning, warning_id)
     if not w or w.user_id != current_user.id:
         raise HTTPException(404, "Warning not found")
@@ -93,6 +201,24 @@ def delete_warning(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Permanently delete a warning.
+
+    The corresponding ``warning_notifications`` rows are cascade-deleted by
+    the foreign-key constraint defined in the database schema, so no manual
+    cleanup is needed.
+
+    Args:
+        warning_id: Database primary key of the warning to delete.
+        current_user: The authenticated user, resolved by ``get_current_user``.
+        db: SQLAlchemy session injected by FastAPI's dependency system.
+
+    Returns:
+        HTTP 204 No Content on success (no response body).
+
+    Raises:
+        HTTPException(404): When the warning does not exist or belongs to a
+            different user.
+    """
     w = db.get(Warning, warning_id)
     if not w or w.user_id != current_user.id:
         raise HTTPException(404, "Warning not found")
