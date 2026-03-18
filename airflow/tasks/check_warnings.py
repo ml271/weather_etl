@@ -81,7 +81,29 @@ def get_connection():
 # ── Validity check ────────────────────────────────────────────────────────────
 
 def is_valid(validity: dict, check_date: date) -> bool:
-    """Returns True if this warning applies to check_date."""
+    """Determine whether a warning's validity specification covers a given date.
+
+    Supports three validity types defined in the ``ValiditySpec`` schema:
+
+    - ``"date_range"``: The warning is active between ``date_from`` and
+      ``date_to`` (both inclusive, ISO-8601 date strings).
+    - ``"weekdays"``: The warning is active on specific days of the week.
+      Weekday integers follow Python's ``date.weekday()`` convention:
+      0 = Monday … 6 = Sunday.
+    - ``"months"``: The warning is active during specific calendar months
+      (1 = January … 12 = December).
+
+    Any other ``type`` value or a missing / malformed spec returns ``False``.
+
+    Args:
+        validity: A dict matching the ``ValiditySpec`` schema, as stored in
+                  the ``warnings.validity`` JSONB column.
+        check_date: The calendar date to test against the validity spec.
+
+    Returns:
+        ``True`` if the warning should be evaluated for ``check_date``,
+        ``False`` otherwise.
+    """
     vtype = validity.get("type", "")
     if vtype == "date_range":
         df = validity.get("date_from")
@@ -134,6 +156,27 @@ def evaluate_conditions(conditions: list, record: dict) -> list:
 # ── Email ─────────────────────────────────────────────────────────────────────
 
 def build_email_html(warning_name: str, city: str, forecast_date: str, triggered: list) -> str:
+    """Render the HTML body for a weather warning notification email.
+
+    Produces a fully self-contained HTML document with inline CSS styled in
+    the same dark blue-grey theme as the dashboard. The email is designed to
+    render correctly in major email clients without external stylesheets.
+
+    Args:
+        warning_name: The user-defined warning name shown in the email subject
+                      line and header.
+        city: The city the warning monitors (shown in the "Station" field).
+        forecast_date: The affected forecast date as a formatted string, e.g.
+                       ``"01.06.2025"``.
+        triggered: List of triggered condition dicts. Each dict must contain
+                   the keys ``"parameter"`` (or ``"label"``), ``"comparator"``,
+                   ``"value"`` (threshold), and ``"actual_value"`` (measured
+                   value that exceeded the threshold).
+
+    Returns:
+        A complete HTML string suitable for use as the body of a
+        ``MIMEText("html")`` email part.
+    """
     rows = ""
     for t in triggered:
         label = t.get("label") or t.get("parameter", "")
@@ -200,7 +243,7 @@ def build_email_html(warning_name: str, city: str, forecast_date: str, triggered
               <tr style="background:#1a2a3f;">
                 <td style="padding:8px 14px;font-size:9px;letter-spacing:.12em;color:#4a6080;text-transform:uppercase;">Parameter</td>
                 <td style="padding:8px 14px;font-size:9px;letter-spacing:.12em;color:#4a6080;text-transform:uppercase;">Schwellwert</td>
-                <td style="padding:8px 14px;font-size:9px;letter-spacing:.12em;color:#4a6080;text-transform:uppercase;">Gemessen</td>
+                <td style="padding:8px 14px;font-size:9px;letter-spacing:.12em;color:#4a6080;text-transform:uppercase;">Vorhergesagt</td>
               </tr>
               {rows}
             </table>
@@ -224,6 +267,28 @@ def build_email_html(warning_name: str, city: str, forecast_date: str, triggered
 
 
 def send_email(to_email: str, subject: str, html_body: str):
+    """Send an HTML email via SMTP.
+
+    Connects to the configured SMTP server and sends a ``multipart/alternative``
+    email with an HTML part. TLS/authentication is only attempted when
+    ``SMTP_USER`` is non-empty, allowing the function to work with both
+    authenticated SMTP relays (production) and unauthenticated catch-all
+    servers like MailHog (development).
+
+    Args:
+        to_email: Recipient email address.
+        subject: Email subject line.
+        html_body: Complete HTML email body as returned by ``build_email_html()``.
+
+    Raises:
+        smtplib.SMTPException: When the SMTP server rejects the connection,
+            authentication fails, or the message cannot be sent.
+        OSError: When the SMTP server host is unreachable.
+
+    Side effects:
+        Logs a confirmation message at INFO level including the recipient and
+        subject on successful delivery.
+    """
     smtp_host = os.getenv("SMTP_HOST", "mailhog")
     smtp_port = int(os.getenv("SMTP_PORT", "1025"))
     smtp_user = os.getenv("SMTP_USER", "")
@@ -249,9 +314,39 @@ def send_email(to_email: str, subject: str, html_body: str):
 # ── Airflow Task Entry Point ──────────────────────────────────────────────────
 
 def check_warnings(**context):
-    """
-    Loads all active user warnings, checks them against the next 7 days of daily forecast,
-    and sends one email per (warning × forecast_date) — no duplicates.
+    """Airflow task entry point for the warning notification step.
+
+    Loads all active user warnings from the database, evaluates each against
+    the daily forecast for the next 7 days, and sends HTML email notifications
+    for new threshold breaches. Notifications are deduplicated via the
+    ``warning_notifications`` table.
+
+    Processing flow for each (warning, forecast_date) pair:
+      1. Check temporal validity via ``is_valid()``.
+      2. Skip if a notification record already exists for this pair.
+      3. Fetch the daily forecast row for the warning's city and date.
+      4. Evaluate all conditions via ``evaluate_conditions()`` (AND logic).
+      5. If triggered: send email, insert a notification record, commit.
+
+    Each successful email is committed individually (not in a batch) so that
+    a failure on one email does not prevent notifications for other warnings.
+
+    This function is registered as a ``PythonOperator`` callable in
+    ``airflow/dags/check_weather_warnings.py``.
+
+    Args:
+        **context: Airflow task context dict (not used directly in this
+                   implementation; included for ``PythonOperator`` compatibility).
+
+    Returns:
+        A summary dict::
+
+            {"sent": <int>, "skipped": <int>, "errors": <int>}
+
+        - ``sent``: number of emails sent in this run.
+        - ``skipped``: number of (warning, date) pairs skipped because a
+          notification was already sent.
+        - ``errors``: number of email delivery failures.
     """
     today = date.today()
     forecast_dates = [today + timedelta(days=i) for i in range(7)]

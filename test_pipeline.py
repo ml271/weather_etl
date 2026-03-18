@@ -25,6 +25,12 @@ from pathlib import Path
 
 # ── Farben für Terminal-Output ─────────────────────
 class C:
+    """ANSI escape-code constants for coloured terminal output.
+
+    Each class attribute is an escape sequence string that can be prepended
+    to any string and followed by ``C.RESET`` to apply the colour/style in
+    a terminal that supports ANSI codes.
+    """
     RESET  = "\033[0m"
     BOLD   = "\033[1m"
     GREEN  = "\033[92m"
@@ -34,11 +40,31 @@ class C:
     CYAN   = "\033[96m"
     DIM    = "\033[2m"
 
-def ok(msg):   print(f"  {C.GREEN}✓{C.RESET} {msg}")
-def warn(msg): print(f"  {C.YELLOW}⚠{C.RESET} {msg}")
-def err(msg):  print(f"  {C.RED}✗{C.RESET} {msg}")
-def info(msg): print(f"  {C.BLUE}→{C.RESET} {msg}")
+def ok(msg):
+    """Print a green success line prefixed with a checkmark."""
+    print(f"  {C.GREEN}✓{C.RESET} {msg}")
+
+
+def warn(msg):
+    """Print a yellow warning line prefixed with a warning symbol."""
+    print(f"  {C.YELLOW}⚠{C.RESET} {msg}")
+
+
+def err(msg):
+    """Print a red error line prefixed with a cross."""
+    print(f"  {C.RED}✗{C.RESET} {msg}")
+
+
+def info(msg):
+    """Print a blue informational line prefixed with an arrow."""
+    print(f"  {C.BLUE}→{C.RESET} {msg}")
+
 def header(msg):
+    """Print a prominent section header with a decorative border.
+
+    Args:
+        msg: The section title to display.
+    """
     print(f"\n{C.BOLD}{C.CYAN}{'─'*50}{C.RESET}")
     print(f"{C.BOLD}{C.CYAN}  {msg}{C.RESET}")
     print(f"{C.BOLD}{C.CYAN}{'─'*50}{C.RESET}")
@@ -48,6 +74,20 @@ def header(msg):
 # ─────────────────────────────────────────────────────
 
 def test_extract(city, lat, lon):
+    """Call the Open-Meteo API and print a summary of the received data.
+
+    Args:
+        city: City name for display purposes.
+        lat: Geographic latitude in decimal degrees.
+        lon: Geographic longitude in decimal degrees.
+
+    Returns:
+        A raw weather dict with keys ``city``, ``latitude``, ``longitude``,
+        ``fetched_at``, and ``data`` (the full API response).
+
+    Raises:
+        SystemExit: On any connection or HTTP error (exits with code 1).
+    """
     header("SCHRITT 1: EXTRACT – Open-Meteo API")
 
     url = "https://api.open-meteo.com/v1/forecast"
@@ -107,15 +147,48 @@ WMO_CODES = {
 }
 
 def safe(lst, i, default=None):
+    """Safely retrieve element ``i`` from a list (test script copy of transform.safe_get).
+
+    Args:
+        lst: Any list-like or None.
+        i: Zero-based index.
+        default: Fallback value when element is absent or None.
+
+    Returns:
+        The element value, or ``default``.
+    """
     try: v = lst[i]; return v if v is not None else default
-    except: return default
+    except: return default  # noqa: E722 – bare except is acceptable in a test script
 
 def apply_op(val, op, threshold):
+    """Evaluate ``val <op> threshold`` and return the boolean result.
+
+    Args:
+        val: Left-hand numeric operand.
+        op: Operator string: ``">"``, ``">="``, ``"<"``, ``"<="``, ``"=="``.
+        threshold: Right-hand numeric operand.
+
+    Returns:
+        ``True`` if the comparison holds, ``False`` otherwise.
+    """
     ops = {">": lambda a,b: a>b, ">=": lambda a,b: a>=b,
            "<": lambda a,b: a<b, "<=": lambda a,b: a<=b, "==": lambda a,b: a==b}
     return ops.get(op, lambda a,b: False)(val, threshold)
 
 def test_transform(raw, config_path):
+    """Run a local (in-process) version of the transform step and print results.
+
+    Mirrors the logic of ``airflow/tasks/transform.py`` without an Airflow
+    dependency so the test can run outside Docker.
+
+    Args:
+        raw: Raw weather dict as returned by ``test_extract()``.
+        config_path: Path to the alerts YAML config file.
+
+    Returns:
+        A dict with keys ``city``, ``daily``, ``hourly_count``, ``alerts``,
+        ``raw`` for use by the load test step.
+    """
     header("SCHRITT 2: TRANSFORM – Daten verarbeiten & Alerts")
 
     city = raw["city"]
@@ -193,6 +266,18 @@ def test_transform(raw, config_path):
 # ─────────────────────────────────────────────────────
 
 def test_load(transformed):
+    """Write transformed data to PostgreSQL and verify the row counts.
+
+    Connects to the database using the same environment variables as the
+    production load task. Performs a raw UPSERT of daily records and alerts.
+
+    Args:
+        transformed: Dict as returned by ``test_transform()``.
+
+    Returns:
+        ``True`` on success, ``False`` if the DB is unreachable or a write
+        error occurs.
+    """
     header("SCHRITT 3: LOAD – PostgreSQL")
 
     try:
@@ -288,6 +373,19 @@ def test_load(transformed):
 # ─────────────────────────────────────────────────────
 
 def test_api(base_url="http://localhost:8000"):
+    """Probe the running FastAPI backend by hitting each major endpoint.
+
+    Uses HTTP GET for all endpoints and treats both 200 and 404 as acceptable
+    (200 = data exists, 404 = pipeline not run yet). Any other status code or
+    a connection error is reported as a failure.
+
+    Args:
+        base_url: Base URL of the backend (default: ``http://localhost:8000``).
+
+    Returns:
+        ``True`` if all endpoints responded with 200 or 404, ``False`` if any
+        returned a different status or was unreachable.
+    """
     header("SCHRITT 4: BACKEND API – Endpoints testen")
 
     endpoints = [
@@ -322,6 +420,16 @@ def test_api(base_url="http://localhost:8000"):
 # ─────────────────────────────────────────────────────
 
 def main():
+    """CLI entry point: parse arguments and execute all test steps in sequence.
+
+    Runs up to four steps depending on the flags provided:
+    1. Extract (always runs)
+    2. Transform (always runs)
+    3. Load (skipped with ``--no-db``)
+    4. API endpoint checks (skipped with ``--no-api``)
+
+    Prints a colour-coded summary table at the end.
+    """
     parser = argparse.ArgumentParser(description="Weather ETL – Lokaler Test")
     parser.add_argument("--no-db",     action="store_true", help="DB-Test überspringen")
     parser.add_argument("--no-api",    action="store_true", help="API-Test überspringen")

@@ -73,9 +73,21 @@
       <div class="sidebar-divider"></div>
 
       <div class="sidebar-alerts">
-        <div class="card-label">AKTIVE WARNUNGEN <span class="alert-count" id="alertCount">0</span></div>
-        <div class="alerts-list" id="alertsList">
+        <div class="card-label">GETRIGGERTE WARNUNGEN <span class="alert-count" id="alertCount">0</span></div>
+        <div class="alerts-list" id="triggeredList">
           <div class="no-alerts">Keine aktiven Warnungen ✓</div>
+        </div>
+
+        <div class="sidebar-divider" style="margin-top:.8rem;"></div>
+        <div class="card-label" style="margin-top:.6rem;">MEINE WARNUNGEN</div>
+        <div id="savedWarningsList">
+          <div class="no-alerts">Nicht eingeloggt</div>
+        </div>
+
+        <div class="sidebar-divider" style="margin-top:.8rem;"></div>
+        <div class="card-label" style="margin-top:.6rem;">WETTERWARNUNGEN</div>
+        <div class="alerts-list" id="alertsList">
+          <div class="no-alerts">Keine Wetterwarnungen ✓</div>
         </div>
       </div>
     </aside>

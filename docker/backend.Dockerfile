@@ -16,7 +16,11 @@ COPY config/ ./config/
 
 EXPOSE 8000
 
-RUN addgroup --system app && adduser --system --ingroup app app
+RUN addgroup --system app && adduser --system --ingroup app app \
+    && mkdir -p /tmp/matplotlib && chmod 777 /tmp/matplotlib
+
+ENV MPLCONFIGDIR=/tmp/matplotlib
+
 USER app
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

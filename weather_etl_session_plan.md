@@ -180,3 +180,15 @@ weather_etl/
 ---
 
 *Erstellt am 11.03.2026 – Weather ETL Projektplanung*
+
+## Session 6
+0. securtiy  agent fixess
+1. theme wiederherstellung des altes theme 
+2. Focus auf ETL Pipeline und Nextwerk Aufbau - Aufbau der Präsentation
+3. unter Aktive Warnungen scheint ein Bug zu sein. Ich möchte das dort alle aktiven Wetterwarnung des users auftauchen mit datum, name überschrittenen wert und vorhersage wert.
+Darunter in der rechten spalte könntenn auch noch die gespeicherten und nicht aktiven warnungen des users angezeigt werden. auch die generischen Wetter warnungen sollten dort aufgelistet sein. ein click auf die jeweilige warnung soll den editor mit den setting der warnung aufrufen.
+4. in email notification bitt "gemmessener Wert" in vorhergesagter Wert ändern.
+
+Aufbau der Präsentation:
+titelbaltt mit name: marvin lorff und Bezug zu Capstone Project des Daten engineering kurs von neufische. der content soll auf englisch sein.
+Der inhalt soll das Project vorstellen ohne den Code zu zeigen. beispiel und Screenshots sollen enthalten sein. der Focus Soll auf dem Data Enginering teil liegen die postgres shemas erklären und die einzelnen schirtten der datenverarbeitung extract transform load behinhalten.Es soll ausserdem die netztwerkstrucktur erklärt werden mit einem diagramm das den aufbau mit dem linux server zeigt das kann cih aber noch nachreeiechen wenn ich den calude code auf dem server laufen lasse er wird alles dann zum aufbau wissen.

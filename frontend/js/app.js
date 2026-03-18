@@ -104,20 +104,121 @@ function updateForecastRange() {
 }
 
 // ─────────────────────────────────────────────────────
-// Render: Alerts
+// Render: Triggered user warnings
+// ─────────────────────────────────────────────────────
+
+const PARAM_LABELS = {
+  temperature_max:    "Max-Temp.",
+  temperature_min:    "Min-Temp.",
+  precipitation_sum:  "Niederschlag",
+  snowfall_sum:       "Schneefall",
+  wind_speed_10m_max: "Wind",
+  wind_gusts_10m_max: "Böen",
+  uv_index_max:       "UV-Index",
+};
+const PARAM_UNITS = {
+  temperature_max: "°C", temperature_min: "°C",
+  precipitation_sum: "mm", snowfall_sum: "cm",
+  wind_speed_10m_max: "km/h", wind_gusts_10m_max: "km/h",
+  uv_index_max: "",
+};
+
+function renderTriggered(items) {
+  const countEl = document.getElementById("alertCount");
+  const listEl  = document.getElementById("triggeredList");
+  countEl.textContent = items.length;
+  countEl.dataset.count = items.length;
+
+  if (!items.length) {
+    listEl.innerHTML = `<div class="no-alerts">Keine aktiven Warnungen ✓</div>`;
+    return;
+  }
+  listEl.innerHTML = "";
+  items.forEach(item => {
+    const chip = document.createElement("div");
+    chip.className = "alert-chip warning";
+    chip.style.cursor = "pointer";
+    chip.title = "Klicken zum Bearbeiten";
+    chip.addEventListener("click", () => {
+      window.location.href = `warnings.html?edit=${encodeURIComponent(item.warning_id)}`;
+    });
+
+    const header = document.createElement("div");
+    header.className = "chip-body";
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "chip-name warning";
+    nameEl.textContent = item.name.toUpperCase();
+
+    const dateEl = document.createElement("span");
+    dateEl.className = "chip-date";
+    dateEl.textContent = "📅 " + item.forecast_date;
+
+    header.append(nameEl, dateEl);
+
+    // One line per triggered condition
+    (item.conditions || []).forEach(c => {
+      const param = c.parameter || "";
+      const label = PARAM_LABELS[param] || param;
+      const unit  = PARAM_UNITS[param]  || "";
+      const actual = c.actual_value != null ? `${parseFloat(c.actual_value).toFixed(1)}${unit}` : "–";
+      const thresh = `${c.value}${unit}`;
+
+      const row = document.createElement("span");
+      row.className = "chip-msg";
+      row.textContent = `${label}: ${actual} (${c.comparator} ${thresh})`;
+      header.appendChild(row);
+    });
+
+    chip.appendChild(header);
+    listEl.appendChild(chip);
+  });
+}
+
+function renderSavedWarnings(warnings) {
+  const el = document.getElementById("savedWarningsList");
+  if (!el) return;
+  if (!warnings || !warnings.length) {
+    el.innerHTML = `<div class="no-alerts">Keine gespeicherten Warnungen</div>`;
+    return;
+  }
+  el.innerHTML = "";
+  warnings.forEach(w => {
+    const chip = document.createElement("div");
+    chip.className = "alert-chip info";
+    chip.style.cursor = "pointer";
+    chip.title = "Klicken zum Bearbeiten";
+    chip.addEventListener("click", () => {
+      window.location.href = `warnings.html?edit=${encodeURIComponent(w.id)}`;
+    });
+
+    const body = document.createElement("div");
+    body.className = "chip-body";
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "chip-name info";
+    nameEl.textContent = w.name.toUpperCase();
+
+    const cityEl = document.createElement("span");
+    cityEl.className = "chip-msg";
+    cityEl.textContent = w.city;
+
+    body.append(nameEl, cityEl);
+    chip.appendChild(body);
+    el.appendChild(chip);
+  });
+}
+
+// ─────────────────────────────────────────────────────
+// Render: Generic weather alerts
 // ─────────────────────────────────────────────────────
 
 function renderAlerts(alerts) {
-  const count   = alerts.length;
-  const countEl = document.getElementById("alertCount");
   const listEl  = document.getElementById("alertsList");
   const banner  = document.getElementById("alertBanner");
 
-  countEl.textContent = count;
-  countEl.dataset.count = count;
-
-  if (count === 0) {
-    listEl.innerHTML = `<div class="no-alerts">Keine aktiven Warnungen ✓</div>`;
+  if (!alerts.length) {
+    listEl.innerHTML = `<div class="no-alerts">Keine Wetterwarnungen ✓</div>`;
     banner.style.display = "none";
     return;
   }
@@ -303,6 +404,28 @@ async function loadForecast() {
   }
 }
 
+async function loadSidebarWarnings() {
+  const token = localStorage.getItem("token");
+  if (!token || !CITY) return;
+
+  // Triggered warnings
+  try {
+    const res = await fetch(
+      `${API}/warnings/triggered?city=${encodeURIComponent(CITY)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (res.ok) renderTriggered(await res.json());
+  } catch (_) {}
+
+  // Saved warnings
+  try {
+    const res = await fetch(`${API}/warnings/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) renderSavedWarnings(await res.json());
+  } catch (_) {}
+}
+
 // ─────────────────────────────────────────────────────
 // Init & Auto-Refresh
 // ─────────────────────────────────────────────────────
@@ -348,6 +471,7 @@ async function init() {
     loadSummary(),
     loadForecast(),
     loadHourlyPlot(currentPlotHours),
+    loadSidebarWarnings(),
   ]);
 }
 

@@ -31,8 +31,9 @@ Dependencies:
 Author: <project maintainer>
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from database import get_db
 from models import Warning, WarningTemplate
@@ -224,3 +225,77 @@ def delete_warning(
         raise HTTPException(404, "Warning not found")
     db.delete(w)
     db.commit()
+
+
+# ── Triggered Warnings ────────────────────────────────────────────────────────
+
+@router.get("/triggered")
+def get_triggered_warnings(
+    city: str = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the user's warnings that have been triggered for a city.
+
+    Joins ``warning_notifications`` with ``warnings`` and ``weather_daily`` to
+    return each triggered warning together with the actual forecast values that
+    caused the trigger. Only warnings belonging to the authenticated user and
+    matching the given city are returned.
+
+    Results are ordered by ``forecast_date`` descending so the most imminent
+    triggers appear first.
+
+    Args:
+        city: Filter results to this city.
+        current_user: The authenticated user.
+        db: SQLAlchemy session.
+
+    Returns:
+        A list of dicts with keys: ``warning_id``, ``name``, ``city``,
+        ``forecast_date``, ``conditions`` (list of condition dicts with an
+        added ``actual_value`` key showing the forecast value for that day).
+    """
+    rows = db.execute(text("""
+        SELECT
+            w.id            AS warning_id,
+            w.name          AS name,
+            w.city          AS city,
+            wn.forecast_date AS forecast_date,
+            w.conditions    AS conditions,
+            d.temperature_max, d.temperature_min, d.precipitation_sum,
+            d.snowfall_sum, d.wind_speed_10m_max, d.wind_gusts_10m_max,
+            d.uv_index_max
+        FROM warning_notifications wn
+        JOIN warnings w  ON w.id  = wn.warning_id
+        JOIN weather_daily d ON d.city = w.city AND d.forecast_date = wn.forecast_date
+        WHERE w.user_id = :user_id
+          AND w.city    = :city
+          AND wn.forecast_date >= CURRENT_DATE
+        ORDER BY wn.forecast_date ASC
+    """), {"user_id": current_user.id, "city": city}).mappings().all()
+
+    result = []
+    for row in rows:
+        daily_vals = {
+            "temperature_max":    row["temperature_max"],
+            "temperature_min":    row["temperature_min"],
+            "precipitation_sum":  row["precipitation_sum"],
+            "snowfall_sum":       row["snowfall_sum"],
+            "wind_speed_10m_max": row["wind_speed_10m_max"],
+            "wind_gusts_10m_max": row["wind_gusts_10m_max"],
+            "uv_index_max":       row["uv_index_max"],
+        }
+        enriched_conditions = []
+        for cond in (row["conditions"] or []):
+            param = cond.get("parameter", "")
+            actual = daily_vals.get(param)
+            enriched_conditions.append({**cond, "actual_value": actual})
+
+        result.append({
+            "warning_id":    row["warning_id"],
+            "name":          row["name"],
+            "city":          row["city"],
+            "forecast_date": str(row["forecast_date"]),
+            "conditions":    enriched_conditions,
+        })
+    return result

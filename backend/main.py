@@ -101,6 +101,21 @@ DEFAULT_CITY = os.getenv("DEFAULT_CITY", "Freiburg")
 _INTERNAL_TOKEN = os.getenv("INTERNAL_API_TOKEN", "")
 
 def _require_internal_token(x_internal_token: str = Header(default="")):
+    """FastAPI dependency that validates the internal API token.
+
+    Used to restrict the ``POST /charts/cache-clear`` endpoint to trusted
+    callers (the Airflow load task) rather than allowing any authenticated user
+    to clear the cache. The token is compared using a plain string comparison;
+    an empty ``INTERNAL_API_TOKEN`` disables the check and allows all callers.
+
+    Args:
+        x_internal_token: Value of the ``X-Internal-Token`` HTTP header,
+            injected by FastAPI.
+
+    Raises:
+        HTTPException(403): When ``INTERNAL_API_TOKEN`` is set and the header
+            value does not match.
+    """
     if not _INTERNAL_TOKEN or x_internal_token != _INTERNAL_TOKEN:
         raise HTTPException(status_code=403, detail="Forbidden")
 
