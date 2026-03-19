@@ -44,12 +44,13 @@ import os
 import json
 import logging
 import smtplib
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import psycopg2
 import psycopg2.extras
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -311,6 +312,264 @@ def send_email(to_email: str, subject: str, html_body: str):
     logger.info(f"Email sent → {to_email}: {subject}")
 
 
+# ── On-demand data refresh ────────────────────────────────────────────────────
+
+_OPEN_METEO_URL       = "https://api.open-meteo.com/v1/forecast"
+_STALE_THRESHOLD_HOURS = 2
+
+_DAILY_VARS = [
+    "temperature_2m_max", "temperature_2m_min",
+    "precipitation_sum", "snowfall_sum",
+    "wind_speed_10m_max", "wind_gusts_10m_max",
+    "weather_code", "uv_index_max", "sunrise", "sunset",
+]
+_HOURLY_VARS = [
+    "temperature_2m", "apparent_temperature",
+    "precipitation", "rain", "snowfall",
+    "wind_speed_10m", "wind_direction_10m",
+    "relative_humidity_2m", "sunshine_duration",
+    "weather_code", "is_day",
+    "soil_temperature_0cm", "soil_temperature_6cm", "soil_temperature_18cm",
+    "soil_moisture_0_to_1cm", "soil_moisture_1_to_3cm", "soil_moisture_3_to_9cm",
+]
+
+_DAILY_UPSERT_SQL = """
+    INSERT INTO weather_daily (
+        city, forecast_date,
+        temperature_max, temperature_min,
+        precipitation_sum, snowfall_sum,
+        wind_speed_max, wind_gusts_max,
+        weather_code, uv_index_max,
+        sunrise, sunset
+    ) VALUES (
+        %(city)s, %(forecast_date)s,
+        %(temperature_max)s, %(temperature_min)s,
+        %(precipitation_sum)s, %(snowfall_sum)s,
+        %(wind_speed_max)s, %(wind_gusts_max)s,
+        %(weather_code)s, %(uv_index_max)s,
+        %(sunrise)s, %(sunset)s
+    )
+    ON CONFLICT (city, forecast_date) DO UPDATE SET
+        temperature_max   = EXCLUDED.temperature_max,
+        temperature_min   = EXCLUDED.temperature_min,
+        precipitation_sum = EXCLUDED.precipitation_sum,
+        snowfall_sum      = EXCLUDED.snowfall_sum,
+        wind_speed_max    = EXCLUDED.wind_speed_max,
+        wind_gusts_max    = EXCLUDED.wind_gusts_max,
+        weather_code      = EXCLUDED.weather_code,
+        uv_index_max      = EXCLUDED.uv_index_max,
+        sunrise           = EXCLUDED.sunrise,
+        sunset            = EXCLUDED.sunset,
+        created_at        = NOW()
+"""
+
+_HOURLY_UPSERT_SQL = """
+    INSERT INTO weather_hourly (
+        city, forecast_time,
+        temperature, feels_like,
+        precipitation, rain, snowfall,
+        wind_speed, wind_direction,
+        humidity, sunshine_duration,
+        weather_code, is_day,
+        soil_temperature_0cm, soil_temperature_6cm, soil_temperature_18cm,
+        soil_moisture_0_1cm, soil_moisture_1_3cm, soil_moisture_3_9cm
+    ) VALUES (
+        %(city)s, %(forecast_time)s,
+        %(temperature)s, %(feels_like)s,
+        %(precipitation)s, %(rain)s, %(snowfall)s,
+        %(wind_speed)s, %(wind_direction)s,
+        %(humidity)s, %(sunshine_duration)s,
+        %(weather_code)s, %(is_day)s,
+        %(soil_temperature_0cm)s, %(soil_temperature_6cm)s, %(soil_temperature_18cm)s,
+        %(soil_moisture_0_1cm)s, %(soil_moisture_1_3cm)s, %(soil_moisture_3_9cm)s
+    )
+    ON CONFLICT (city, forecast_time) DO UPDATE SET
+        temperature           = EXCLUDED.temperature,
+        feels_like            = EXCLUDED.feels_like,
+        precipitation         = EXCLUDED.precipitation,
+        rain                  = EXCLUDED.rain,
+        snowfall              = EXCLUDED.snowfall,
+        wind_speed            = EXCLUDED.wind_speed,
+        wind_direction        = EXCLUDED.wind_direction,
+        humidity              = EXCLUDED.humidity,
+        sunshine_duration     = EXCLUDED.sunshine_duration,
+        weather_code          = EXCLUDED.weather_code,
+        is_day                = EXCLUDED.is_day,
+        soil_temperature_0cm  = EXCLUDED.soil_temperature_0cm,
+        soil_temperature_6cm  = EXCLUDED.soil_temperature_6cm,
+        soil_temperature_18cm = EXCLUDED.soil_temperature_18cm,
+        soil_moisture_0_1cm   = EXCLUDED.soil_moisture_0_1cm,
+        soil_moisture_1_3cm   = EXCLUDED.soil_moisture_1_3cm,
+        soil_moisture_3_9cm   = EXCLUDED.soil_moisture_3_9cm,
+        created_at            = NOW()
+"""
+
+
+def _sg(lst, i, default=None):
+    """Safely get index i from list, returning default on missing or None."""
+    try:
+        v = lst[i]
+        return v if v is not None else default
+    except (IndexError, TypeError):
+        return default
+
+
+def _fetch_open_meteo(city: str, lat: float, lon: float) -> dict:
+    """Call the Open-Meteo forecast API and return the parsed JSON response."""
+    resp = requests.get(
+        _OPEN_METEO_URL,
+        params={
+            "latitude":     lat,
+            "longitude":    lon,
+            "daily":        ",".join(_DAILY_VARS),
+            "hourly":       ",".join(_HOURLY_VARS),
+            "timezone":     "Europe/Berlin",
+            "forecast_days": 7,
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    logger.info(f"Fetched Open-Meteo data for {city} ({lat}, {lon})")
+    return resp.json()
+
+
+def _parse_daily_records(city: str, api_data: dict) -> list:
+    """Convert the Open-Meteo daily response block into a list of DB-ready dicts."""
+    d = api_data.get("daily", {})
+    return [
+        {
+            "city":             city,
+            "forecast_date":    t,
+            "temperature_max":  _sg(d.get("temperature_2m_max"), i),
+            "temperature_min":  _sg(d.get("temperature_2m_min"), i),
+            "precipitation_sum": _sg(d.get("precipitation_sum"), i, 0.0),
+            "snowfall_sum":     _sg(d.get("snowfall_sum"), i, 0.0),
+            "wind_speed_max":   _sg(d.get("wind_speed_10m_max"), i),
+            "wind_gusts_max":   _sg(d.get("wind_gusts_10m_max"), i),
+            "weather_code":     _sg(d.get("weather_code"), i),
+            "uv_index_max":     _sg(d.get("uv_index_max"), i),
+            "sunrise":          _sg(d.get("sunrise"), i),
+            "sunset":           _sg(d.get("sunset"), i),
+        }
+        for i, t in enumerate(d.get("time", []))
+    ]
+
+
+def _parse_hourly_records(city: str, api_data: dict) -> list:
+    """Convert the Open-Meteo hourly response block into a list of DB-ready dicts."""
+    h = api_data.get("hourly", {})
+    return [
+        {
+            "city":               city,
+            "forecast_time":      t,
+            "temperature":        _sg(h.get("temperature_2m"), i),
+            "feels_like":         _sg(h.get("apparent_temperature"), i),
+            "precipitation":      _sg(h.get("precipitation"), i, 0.0),
+            "rain":               _sg(h.get("rain"), i, 0.0),
+            "snowfall":           _sg(h.get("snowfall"), i, 0.0),
+            "wind_speed":         _sg(h.get("wind_speed_10m"), i),
+            "wind_direction":     _sg(h.get("wind_direction_10m"), i),
+            "humidity":           _sg(h.get("relative_humidity_2m"), i),
+            "sunshine_duration":  _sg(h.get("sunshine_duration"), i, 0.0),
+            "weather_code":       _sg(h.get("weather_code"), i),
+            "is_day":             bool(_sg(h.get("is_day"), i, 0)),
+            "soil_temperature_0cm":  _sg(h.get("soil_temperature_0cm"), i),
+            "soil_temperature_6cm":  _sg(h.get("soil_temperature_6cm"), i),
+            "soil_temperature_18cm": _sg(h.get("soil_temperature_18cm"), i),
+            "soil_moisture_0_1cm":   _sg(h.get("soil_moisture_0_to_1cm"), i),
+            "soil_moisture_1_3cm":   _sg(h.get("soil_moisture_1_to_3cm"), i),
+            "soil_moisture_3_9cm":   _sg(h.get("soil_moisture_3_to_9cm"), i),
+        }
+        for i, t in enumerate(h.get("time", []))
+    ]
+
+
+def _refresh_stale_cities():
+    """Ensure all cities with active user warnings have up-to-date forecast data.
+
+    For each distinct city referenced by an active warning:
+      1. Check ``weather_daily.created_at`` – if data is younger than
+         ``_STALE_THRESHOLD_HOURS``, skip (already fresh).
+      2. Look up coordinates from the most recent ``weather_raw`` record.
+      3. Fetch a fresh 7-day forecast from Open-Meteo.
+      4. UPSERT daily + hourly records into the database.
+
+    Failures for individual cities are logged and skipped so that one
+    unreachable station does not prevent warning checks for other cities.
+    """
+    conn = get_connection()
+    try:
+        # ── Collect distinct cities with active warnings ────────────────────
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                SELECT DISTINCT w.city
+                FROM   warnings w
+                JOIN   users    u ON w.user_id = u.id
+                WHERE  w.active = TRUE AND u.is_active = TRUE
+            """)
+            cities = [row["city"] for row in cur.fetchall()]
+
+        if not cities:
+            return
+
+        logger.info(f"Refresh check for {len(cities)} warning city/cities: {cities}")
+        now_utc = datetime.now(timezone.utc)
+
+        for city in cities:
+            # ── Staleness check ────────────────────────────────────────────
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT MAX(created_at) AS last_update FROM weather_daily WHERE city = %s",
+                    (city,),
+                )
+                row = cur.fetchone()
+
+            last_update = row["last_update"] if row else None
+            if last_update is not None:
+                if last_update.tzinfo is None:
+                    last_update = last_update.replace(tzinfo=timezone.utc)
+                age_h = (now_utc - last_update).total_seconds() / 3600
+                if age_h < _STALE_THRESHOLD_HOURS:
+                    logger.info(f"{city}: data is {age_h:.1f}h old – fresh, skipping")
+                    continue
+                logger.info(f"{city}: data is {age_h:.1f}h old – refreshing")
+            else:
+                logger.info(f"{city}: no data in DB – fetching for the first time")
+
+            # ── Get coordinates from last known weather_raw record ─────────
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT latitude::float AS lat, longitude::float AS lon "
+                    "FROM weather_raw WHERE city = %s ORDER BY fetched_at DESC LIMIT 1",
+                    (city,),
+                )
+                coords = cur.fetchone()
+
+            if not coords:
+                logger.warning(f"{city}: no coordinates found in weather_raw – skipping refresh")
+                continue
+
+            # ── Fetch from Open-Meteo and upsert ──────────────────────────
+            try:
+                api_data       = _fetch_open_meteo(city, coords["lat"], coords["lon"])
+                daily_records  = _parse_daily_records(city, api_data)
+                hourly_records = _parse_hourly_records(city, api_data)
+
+                with conn.cursor() as cur:
+                    psycopg2.extras.execute_batch(cur, _DAILY_UPSERT_SQL, daily_records)
+                    psycopg2.extras.execute_batch(cur, _HOURLY_UPSERT_SQL, hourly_records)
+                conn.commit()
+                logger.info(
+                    f"{city}: refreshed {len(daily_records)} daily + "
+                    f"{len(hourly_records)} hourly records"
+                )
+            except Exception as exc:
+                conn.rollback()
+                logger.error(f"{city}: refresh failed – {exc}", exc_info=True)
+    finally:
+        conn.close()
+
+
 # ── Airflow Task Entry Point ──────────────────────────────────────────────────
 
 def check_warnings(**context):
@@ -348,6 +607,9 @@ def check_warnings(**context):
           notification was already sent.
         - ``errors``: number of email delivery failures.
     """
+    # Ensure all warning cities have fresh forecast data before evaluating conditions
+    _refresh_stale_cities()
+
     today = date.today()
     forecast_dates = [today + timedelta(days=i) for i in range(7)]
 

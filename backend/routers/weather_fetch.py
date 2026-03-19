@@ -40,7 +40,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from database import get_db
-from routers.auth import get_current_user
 import chart_cache
 
 router = APIRouter(prefix="/weather", tags=["Weather Fetch"])
@@ -314,7 +313,6 @@ def fetch_now(
     lat:  float = Query(..., description="Breitengrad"),
     lon:  float = Query(..., description="Längengrad"),
     db: Session = Depends(get_db),
-    _current_user = Depends(get_current_user),
 ):
     """Fetch fresh weather data from Open-Meteo and persist it to the database.
 
@@ -335,10 +333,6 @@ def fetch_now(
         lat: Geographic latitude in decimal degrees (WGS-84).
         lon: Geographic longitude in decimal degrees (WGS-84).
         db: SQLAlchemy session injected by FastAPI's dependency system.
-        _current_user: Authenticated user resolved by the ``get_current_user``
-              dependency. The user object is not used in the function body;
-              the dependency is present solely to enforce authentication.
-
     Returns:
         A JSON object confirming the operation::
 

@@ -380,6 +380,29 @@ body {
   display: flex; align-items: center; gap: 0.8rem;
 }
 
+/* ── Sidebar section heading ── */
+.section-heading {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+
+/* ── Inactive badge on saved alerts ── */
+.chip-badge-inactive {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  border: 1px solid var(--text-muted);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  vertical-align: middle;
+}
+
 /* ── Alerts Card ── */
 .alert-count {
   background: var(--danger);

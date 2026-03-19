@@ -238,3 +238,60 @@ Unter Triggert Alerts sollen alle aktuell vom User angelegte und getriggerten Wa
 10. Lass mal Claude code auf dem Server mit dem Opus Modell laufen um allen Code zu Überprüfen und Verbesserungen vorzuschlagen, vielleicht das nicht als letztes.
 
 11. Kläre ab ob es vielleicht bei Warings und Alerts zu einer unstimmigkeit und uneindeutigkeit kommt , ich glaube das habe ich nicht einheitliche gemacht.
+
+---
+
+### Session 7 – Strukturierter Arbeitsplan (Claude Code, 2026-03-19)
+
+**Deadline:** 20.03.2026
+
+#### A) Code-Änderungen
+
+| # | Aufgabe | Aufwand |
+|---|---------|---------|
+| 0 | Navigation: Configurator → Dashboard (nicht Landing Page) | klein |
+| 2 | Charts: Gesamte Sonnenscheindauer (Stunden) als Zahl im Barplot | mittel |
+| 3 | Configurator: Sonnenscheindauer-Einheit min/h → h/Tag | klein |
+| 3.2 | Alert speichern: Timing-Auswahl für Email-Notification (vollst. mit Logik) | groß |
+| 4 | Quick Fix: Neue Station triggert ETL nicht – Berlin-Bug (auth entfernen) | mittel |
+| 9 | Sidebar: General / My Alerts / Triggered Alerts + "not signed in" Fix | groß |
+| 11 | Terminologie Warnings vs. Alerts vereinheitlichen | mittel |
+
+#### B) Erklärungen (erledigt in Session 7)
+
+- ✅ Airflow Datenfluss: DAG 1 (stündlich ETL) + DAG 2 (alle 2h Warning-Check)
+- ✅ FastAPI & Endpoints: Grundverständnis + alle Endpoints dokumentiert
+- ✅ JSONB: Was ist es, warum hier sinnvoll (conditions, validity, weather_raw)
+- ✅ Trigger-Mechanismus Weather Warnings + Brevo vs. MailHog
+- ✅ Berlin-Bug Ursache: fetch-now erfordert Auth, nicht-eingeloggte User → stiller Fehlschlag
+- ✅ SYNC-Anzeige: zeigt last_updated aus DB, Staleness-Check > 6h triggert fetch-now
+
+#### C) User-TODOs
+
+| # | Aufgabe |
+|---|---------|
+| 1 | Google Workspace / Drive verknüpfen für Präsentation |
+| 7 | Server-Architekturdiagramm: Claude Code auf Server (Docker/Proxy) |
+| 8 | Bildschirmaufnahme: Login → Warning → Alert |
+| 10 | Claude Code mit Opus auf Server – Code-Review |
+
+#### Festgelegte Reihenfolge
+
+1. Erklärungen (5 → 6 → 1.2 → 4/SYNC) ✅ erledigt
+2. Berlin-Bug Quick Fix (0 → 4)
+3. Sidebar Alerts umstrukturieren (9)
+4. Configurator Einheit (3)
+5. Sunshine Chart (2)
+6. Email Notification Timing (3.2)
+7. Terminologie (11)
+8. Präsentation .pptx bearbeiten (1)
+
+#### Kritische Dateien
+
+- `frontend/js/app.js` – Navigation, Sidebar, Charts
+- `frontend/index.html` – Sidebar-Struktur
+- `frontend/css/style.css` – Sidebar-Styling
+- `backend/main.py` – API, Charts
+- `backend/models.py` – Alert-Model (Timing-Felder)
+- `backend/routers/weather_fetch.py` – fetch-now Auth entfernen
+- `docker/init.sql` – DB-Schema

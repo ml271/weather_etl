@@ -130,7 +130,7 @@ function renderTriggered(items) {
   countEl.dataset.count = items.length;
 
   if (!items.length) {
-    listEl.innerHTML = `<div class="no-alerts">No active warnings ✓</div>`;
+    listEl.innerHTML = `<div class="no-alerts">No triggered alerts ✓</div>`;
     return;
   }
   listEl.innerHTML = "";
@@ -175,11 +175,29 @@ function renderTriggered(items) {
   });
 }
 
+function _validityLabel(validity) {
+  if (!validity) return "";
+  const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const DAY_SHORT   = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  if (validity.type === "date_range") {
+    const from = validity.date_from ? validity.date_from.slice(5).replace("-",".") : "?";
+    const to   = validity.date_to   ? validity.date_to.slice(5).replace("-",".")   : "?";
+    return `${from} – ${to}`;
+  }
+  if (validity.type === "weekdays" && validity.weekdays) {
+    return validity.weekdays.map(d => DAY_SHORT[d] ?? d).join(", ");
+  }
+  if (validity.type === "months" && validity.months) {
+    return validity.months.map(m => MONTH_SHORT[m - 1] ?? m).join(", ");
+  }
+  return "";
+}
+
 function renderSavedWarnings(warnings) {
   const el = document.getElementById("savedWarningsList");
   if (!el) return;
   if (!warnings || !warnings.length) {
-    el.innerHTML = `<div class="no-alerts">No saved warnings</div>`;
+    el.innerHTML = `<div class="no-alerts">No alerts saved yet</div>`;
     return;
   }
   el.innerHTML = "";
@@ -195,15 +213,46 @@ function renderSavedWarnings(warnings) {
     const body = document.createElement("div");
     body.className = "chip-body";
 
-    const nameEl = document.createElement("span");
-    nameEl.className = "chip-name info";
-    nameEl.textContent = w.name.toUpperCase();
+    // Name + inactive badge on same line
+    const nameRow = document.createElement("span");
+    nameRow.className = "chip-name info";
+    nameRow.textContent = w.name.toUpperCase();
+    if (!w.active) {
+      const badge = document.createElement("span");
+      badge.className = "chip-badge-inactive";
+      badge.textContent = "inactive";
+      nameRow.appendChild(badge);
+    }
 
+    // City
     const cityEl = document.createElement("span");
     cityEl.className = "chip-msg";
-    cityEl.textContent = w.city;
+    cityEl.textContent = "📍 " + w.city;
 
-    body.append(nameEl, cityEl);
+    body.append(nameRow, cityEl);
+
+    // First condition summary
+    const conds = Array.isArray(w.conditions) ? w.conditions : [];
+    if (conds.length) {
+      const c = conds[0];
+      const label = PARAM_LABELS[c.parameter] || c.parameter;
+      const unit  = PARAM_UNITS[c.parameter]  || "";
+      const condEl = document.createElement("span");
+      condEl.className = "chip-msg";
+      condEl.textContent = `${label} ${c.comparator} ${c.value}${unit}` +
+        (conds.length > 1 ? ` +${conds.length - 1}` : "");
+      body.appendChild(condEl);
+    }
+
+    // Validity period
+    const validityText = _validityLabel(w.validity);
+    if (validityText) {
+      const valEl = document.createElement("span");
+      valEl.className = "chip-msg";
+      valEl.textContent = "🗓 " + validityText;
+      body.appendChild(valEl);
+    }
+
     chip.appendChild(body);
     el.appendChild(chip);
   });
@@ -383,12 +432,9 @@ async function loadSummary() {
 
 async function fetchWeatherNow() {
   if (!CITY || LAT == null || LON == null) return false;
-  const token = localStorage.getItem("token");
-  if (!token) return false;
   const url = `${API}/weather/fetch-now?city=${encodeURIComponent(CITY)}&lat=${LAT}&lon=${LON}`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`fetch-now → ${res.status}`);
   return true;
@@ -406,9 +452,19 @@ async function loadForecast() {
 
 async function loadSidebarWarnings() {
   const token = localStorage.getItem("token");
-  if (!token || !CITY) return;
 
-  // Triggered warnings
+  if (!token) {
+    const signInMsg = `<div class="no-alerts">Sign in to manage alerts</div>`;
+    const savedEl = document.getElementById("savedWarningsList");
+    const triggeredEl = document.getElementById("triggeredList");
+    if (savedEl) savedEl.innerHTML = signInMsg;
+    if (triggeredEl) triggeredEl.innerHTML = signInMsg;
+    return;
+  }
+
+  if (!CITY) return;
+
+  // Triggered alerts
   try {
     const res = await fetch(
       `${API}/warnings/triggered?city=${encodeURIComponent(CITY)}`,
@@ -417,7 +473,7 @@ async function loadSidebarWarnings() {
     if (res.ok) renderTriggered(await res.json());
   } catch (_) {}
 
-  // Saved warnings
+  // My alerts
   try {
     const res = await fetch(`${API}/warnings/`, {
       headers: { Authorization: `Bearer ${token}` },
