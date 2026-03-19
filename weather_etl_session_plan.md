@@ -192,3 +192,49 @@ Darunter in der rechten spalte könntenn auch noch die gespeicherten und nicht a
 Aufbau der Präsentation:
 titelbaltt mit name: marvin lorff und Bezug zu Capstone Project des Daten engineering kurs von neufische. der content soll auf englisch sein.
 Der inhalt soll das Project vorstellen ohne den Code zu zeigen. beispiel und Screenshots sollen enthalten sein. der Focus Soll auf dem Data Enginering teil liegen die postgres shemas erklären und die einzelnen schirtten der datenverarbeitung extract transform load behinhalten.Es soll ausserdem die netztwerkstrucktur erklärt werden mit einem diagramm das den aufbau mit dem linux server zeigt das kann cih aber noch nachreeiechen wenn ich den calude code auf dem server laufen lasse er wird alles dann zum aufbau wissen.
+Die Präsentation ist auf meine bidschirm manchmal nur halb zu sehen weil der untere bereich verschwindet, im oberen teil ist vielleciht noch etwas platz den wir kürzen können oder? oder  man hätte auf der seiten scrollen müssen was baer leider nicht geht.besonderst seite 3 wird abgeschnitten auch wenn ich ganz rauszoome.
+
+
+### Session 7 ###
+
+0. Navigation: von dem Weather Warning Konfigurator soll es zurück auf das Dashboard gehen und nicht auf den index /Stationssuche.
+
+1. Presentation: Ich habe die Präsentation als ppt in meinem Googledrive, ich will  Claude Code mit meinem Googleworkspace verknüpfen. Dann sollest du in der lage sein powerpoint dateien dort abzulegen und einzulesen richtig?
+ich habe ein Copie vorerst ins lokal Verzeichnis präsi gelegt als .pptx
+
+1.2 In der Präsentation fehlt noch ein Teil der die Triggers der Weather Warnings erklärt und die Versendung der Emails mit Brevo und Mailhog. Erkläre mir auch noch mal JSONB das Deti Format und warum es hier sinnvolll ist zu bnutzen.
+
+2. Diagramme: Kannst du gesamten Sonnenscheindauer in Stunden im Barplot der Sonnscheindauer anzeigen, einfach als Zahl in der Mitte, soll aber gut lesbar sein vor dem dunkeln hintergurnd.
+
+3. Warnungskofigurator: Die Sonnenscheindauer sollen dort pro Tag angegeben werden und nicht als min/h sondern h/tag.
+
+3.2 Es soll beim Speichern des Weather Alters, indem fenster in dem der name eingegeben wird auch ein Auswahl geben die bestimmt wann eine Notification per mail gesendet wird, zur auswahl steht: sobald daten verfügbar sind (sollte 7 tage sein), 1 - 6 tage vorher eintreffen der Wetter bedingungen, tag vorher, X Stunden vorher.
+
+4. Bei dem Aufrufen von neuen Stationen werden macnhmal keine Daten abgrufen. Bsp Berlin, Station wird gefunden aber Dashboard zeigt: Hourly forecast
+No data – run ETL job! Wie kommt es dazu? triggert der Airflow weather-ttl-pipeline nicht wenn man dashboard aufruft sondern "nur" alle 2 Stunden? das sollte nicht so sein. Aufjeden Fall sollte das in der Präsenatation nicht mehr vorkommen! schneler fix muss her.
+Erkläre mir aussdem die SYNC Anzeige und wie sie mit Datenaktualisierung zusammenhängt.
+
+5. Im Zusammenhang mit 4. wie genau sieht der Datenfluss aus? wann werden die airflow dags getriggert? wie genau sieht es innerhlab der dags aus? Genauer Beschreibung nochmal der Datenpiplines Extract, Transoform und Load.
+
+6. Ich möchte nochmehr über Fast API und die Endpoints lernen da ich glaub das mir dort noch ein Bisschen Grundverständnis fehlt um das ganze System besser erklären zu können. Kannst du das mir noch erklären und veranschaulichen?
+
+7. mein Todo: ich möchte noch ein Architekturdiagramm des linux servers zur präsentations hinzufügen das werde ich aber von ClaudCode auf dem Server genieren lassen weil er den einblick in das gesamte Dockersetup hat mit proxy manager usw.
+
+8. mein todo: Ich möchte für die Präsi noch eine Bildschirmaufnahme machen wie ich durch die Website klicke mich anmelde, ein warninge konfiguriere und dann acuh eine warning erhalte. das sollten wir mit einer entsprechenden test warning vielleicht planen damit das funktioniert.
+
+9. Im Dashbaord müssen wir noch mal die linke seit anpassen, unterhalb der wetterstation, wo die gespeicherten und ativen Weather Warnings angezeigt werden.
+
+Überschirft: Weather-Alters.
+General Alters
+My Weather Alters
+Triggered Alters
+
+Momentan wird mir obwohl ich eingelogtt bin unter My warnigs angeziegt: " not signed in"
+
+Also um dir noch mal mehr Kontext zu den Warnings/Alters geben: Allgemeine oder Voreingestellte Warnings sind in config/alers_config gespeichert und werden immer auf die akuelle Ausgewälte Station angewendet! hier werden keine emails versand wenn die bedingung eintriit sondern nur am linken Rand hier die Meldung angezeigt, mit Datum und Uhrzeit.
+Unter My Alters sollen die vom User angelegt warnings bzw alters gespeichert sein, sowohl ative als auch deaktive. Die anzeige soll Name Station Bedingung und Zietrahmen enthalten. EIn click hier soll den Configurator öffnen.
+Unter Triggert Alerts sollen alle aktuell vom User angelegte und getriggerten Warnings aufgeführt sein, genau so wie unter my Alters nur mit Name, Station sowie tag Uhrzeit und überschrittener Wert, bedingung un vorhersage wert. Ein Alter gilt solange als getriggert wie der wert auch in den Vorhersage Daten vorkommt.
+
+10. Lass mal Claude code auf dem Server mit dem Opus Modell laufen um allen Code zu Überprüfen und Verbesserungen vorzuschlagen, vielleicht das nicht als letztes.
+
+11. Kläre ab ob es vielleicht bei Warings und Alerts zu einer unstimmigkeit und uneindeutigkeit kommt , ich glaube das habe ich nicht einheitliche gemacht.

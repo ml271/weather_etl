@@ -20,7 +20,7 @@ Design notes:
 Dependencies:
   pydantic >= 2.0
 
-Author: <project maintainer>
+Author: marivn lorff and claude code
 """
 
 from datetime import date, datetime

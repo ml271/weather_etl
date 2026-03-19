@@ -1,6 +1,5 @@
 # ─────────────────────────────────────────────────────────────────
 # Weather Alert Configuration
-# Passe diese Werte an deine Bedürfnisse an!
 # ─────────────────────────────────────────────────────────────────
 
 alerts:
@@ -17,7 +16,7 @@ alerts:
   - name: "Starkregen"
     enabled: true
     severity: warning
-    message: "Starkregen erwartet! Überflutungen möglich – bitte Keller sichern."
+    message: "Starkregen erwartet! Überflutungen möglich"
     conditions:
       precipitation_sum:
         operator: ">"
@@ -59,11 +58,3 @@ alerts:
         operator: ">="
         value: 8
 
-  - name: "Hitzewelle"
-    enabled: true
-    severity: warning
-    message: "Wärme erwartet – gute Bedingungen für Outdoor-Aktivitäten mit Vorsicht."
-    conditions:
-      temperature_max:
-        operator: ">="
-        value: 30    # °C

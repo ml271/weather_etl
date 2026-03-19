@@ -416,36 +416,38 @@
     </div>
   </div>
 
-  <div class="etl-step">
-    <div class="step-num">E</div>
-    <div>
-      <div class="step-title">Extract — Open-Meteo API</div>
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.45em">
+    <div class="etl-step" style="flex-direction:column; align-items:flex-start; gap:0.3em">
+      <div style="display:flex; align-items:center; gap:0.5em">
+        <div class="step-num">E</div>
+        <div class="step-title">Extract</div>
+      </div>
       <div class="step-desc">
-        GET request to <span class="accent">api.open-meteo.com/v1/forecast</span> with lat/lon.
-        Returns 7-day daily (10 variables) + 168-hour hourly (17 variables incl. soil data).
-        Result pushed to Airflow <span class="accent">XCom</span> for the next task.
+        GET <span class="accent">api.open-meteo.com</span> with lat/lon.
+        7-day daily (10 vars) + 168h hourly (17 vars incl. soil data).
+        Raw JSON pushed to Airflow <span class="accent">XCom</span>.
       </div>
     </div>
-  </div>
-  <div class="etl-step">
-    <div class="step-num">T</div>
-    <div>
-      <div class="step-title">Transform — Reshape &amp; Enrich</div>
+    <div class="etl-step" style="flex-direction:column; align-items:flex-start; gap:0.3em">
+      <div style="display:flex; align-items:center; gap:0.5em">
+        <div class="step-num">T</div>
+        <div class="step-title">Transform</div>
+      </div>
       <div class="step-desc">
-        API arrays unpacked into flat dicts (one dict = one row).
-        WMO weather codes mapped to human-readable descriptions.
-        Alert rules loaded from YAML and evaluated with AND logic against daily records.
+        Arrays unpacked → flat row dicts.
+        WMO codes mapped to descriptions.
+        Alert rules (YAML) evaluated with AND logic.
       </div>
     </div>
-  </div>
-  <div class="etl-step">
-    <div class="step-num">L</div>
-    <div>
-      <div class="step-title">Load — UPSERT into PostgreSQL</div>
+    <div class="etl-step" style="flex-direction:column; align-items:flex-start; gap:0.3em">
+      <div style="display:flex; align-items:center; gap:0.5em">
+        <div class="step-num">L</div>
+        <div class="step-title">Load</div>
+      </div>
       <div class="step-desc">
-        Daily and hourly records written with <span class="accent">ON CONFLICT DO UPDATE</span> (city + date unique key).
-        Previous alerts for the city are deactivated; fresh alerts inserted.
-        No duplicate data accumulates across pipeline runs.
+        <span class="accent">ON CONFLICT DO UPDATE</span> — no duplicates.
+        Previous alerts deactivated; fresh alerts inserted.
+        Idempotent across all pipeline runs.
       </div>
     </div>
   </div>
