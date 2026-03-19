@@ -12,7 +12,7 @@ async function initUserMenu() {
 
   const token = localStorage.getItem("token");
   if (!token) {
-    btn.title = "Anmelden";
+    btn.title = "Sign in";
     btn.addEventListener("click", () => {
       const next = encodeURIComponent(window.location.pathname + window.location.search);
       window.location.href = "login.html?next=" + next;
@@ -37,7 +37,7 @@ async function initUserMenu() {
     _loadWarnings(token);
   } catch {
     localStorage.removeItem("token");
-    btn.title = "Anmelden";
+    btn.title = "Sign in";
     btn.addEventListener("click", () => {
       const next = encodeURIComponent(window.location.pathname + window.location.search);
       window.location.href = "login.html?next=" + next;
@@ -61,7 +61,7 @@ async function _loadWarnings(token) {
     if (!res.ok) return;
     const warnings = await res.json();
     if (!warnings.length) {
-      container.innerHTML = '<div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);">Noch keine Warnungen.</div>';
+      container.innerHTML = '<div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);">No warnings yet.</div>';
     } else {
       container.innerHTML = "";
       warnings.forEach(w => {

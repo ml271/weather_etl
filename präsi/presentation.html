@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather ETL – Capstone Project | Marvin Lorff</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/night.css" />
+  <style>
+    :root {
+      --accent: #4fc3f7;
+      --accent2: #81c784;
+      --accent3: #ffb74d;
+      --muted: #90a4ae;
+      --bg-card: rgba(255,255,255,0.06);
+      --border: rgba(79, 195, 247, 0.3);
+    }
+
+    .reveal { font-family: 'Segoe UI', system-ui, sans-serif; }
+    .reveal .slides section { overflow: hidden; }
+
+    /* ── Title slide ── */
+    .slide-title { text-align: center; }
+    .slide-title .project-name {
+      font-size: 2.2em;
+      font-weight: 700;
+      background: linear-gradient(135deg, #4fc3f7, #81c784);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.05em;
+    }
+    .slide-title .subtitle {
+      font-size: 0.95em;
+      color: var(--muted);
+      margin-bottom: 0.8em;
+    }
+    .slide-title .author-box {
+      display: inline-block;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.4em 1.6em;
+      background: var(--bg-card);
+    }
+    .slide-title .author-name { font-size: 1.15em; font-weight: 600; color: #fff; }
+    .slide-title .school { font-size: 0.78em; color: var(--muted); margin-top: 0.15em; }
+    .slide-title .date-badge {
+      margin-top: 0.6em;
+      font-size: 0.75em;
+      color: var(--muted);
+    }
+
+    /* ── Section headers ── */
+    .section-label {
+      font-size: 0.62em;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: 0.1em;
+    }
+
+    /* ── Generic cards ── */
+    .cards { display: flex; gap: 0.6em; justify-content: center; flex-wrap: wrap; }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.55em 0.8em;
+      flex: 1;
+      min-width: 140px;
+      max-width: 200px;
+    }
+    .card .card-icon { font-size: 1.3em; margin-bottom: 0.1em; }
+    .card .card-label { font-size: 0.68em; color: var(--muted); line-height: 1.3; }
+    .card .card-value { font-size: 0.88em; font-weight: 600; color: #fff; }
+
+    /* ── Tech pill ── */
+    .pills { display: flex; flex-wrap: wrap; gap: 0.4em; justify-content: center; margin: 0.5em 0; }
+    .pill {
+      background: rgba(79,195,247,0.15);
+      border: 1px solid rgba(79,195,247,0.4);
+      border-radius: 20px;
+      padding: 0.2em 0.7em;
+      font-size: 0.7em;
+      color: var(--accent);
+    }
+    .pill.green { background: rgba(129,199,132,0.15); border-color: rgba(129,199,132,0.4); color: var(--accent2); }
+    .pill.orange { background: rgba(255,183,77,0.15); border-color: rgba(255,183,77,0.4); color: var(--accent3); }
+
+    /* ── Flow diagram ── */
+    .flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin: 0.4em 0;
+    }
+    .flow-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.35em 0.7em;
+      font-size: 0.68em;
+      text-align: center;
+      min-width: 90px;
+    }
+    .flow-box .fb-icon { font-size: 1.2em; }
+    .flow-box .fb-label { color: var(--muted); font-size: 0.82em; margin-top: 0.05em; }
+    .flow-arrow {
+      color: var(--accent);
+      font-size: 1.1em;
+      padding: 0 0.25em;
+    }
+
+    /* ── DB schema table ── */
+    .schema-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.63em;
+    }
+    .schema-table th {
+      background: rgba(79,195,247,0.15);
+      color: var(--accent);
+      padding: 0.25em 0.5em;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .schema-table td {
+      padding: 0.22em 0.5em;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      color: #ccc;
+    }
+    .schema-table tr:last-child td { border-bottom: none; }
+    .tag {
+      display: inline-block;
+      border-radius: 4px;
+      padding: 0.1em 0.4em;
+      font-size: 0.85em;
+    }
+    .tag-pk { background: rgba(255,183,77,0.2); color: var(--accent3); }
+    .tag-fk { background: rgba(129,199,132,0.2); color: var(--accent2); }
+    .tag-json { background: rgba(79,195,247,0.2); color: var(--accent); }
+
+    /* ── Network diagram ── */
+    .net-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.45em;
+      font-size: 0.68em;
+    }
+    .net-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.4em 0.5em;
+      text-align: center;
+    }
+    .net-box .nb-icon { font-size: 1.2em; }
+    .net-box .nb-name { font-weight: 600; color: #fff; font-size: 0.9em; }
+    .net-box .nb-port { color: var(--muted); font-size: 0.8em; }
+    .net-box .nb-desc { color: var(--accent); font-size: 0.76em; line-height: 1.3; }
+    .net-box.highlight { border-color: rgba(129,199,132,0.6); }
+
+    /* ── ETL step box ── */
+    .etl-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7em;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.45em 0.8em;
+      margin: 0.3em 0;
+      text-align: left;
+    }
+    .etl-step .step-num {
+      font-size: 1.4em;
+      color: var(--accent);
+      font-weight: 700;
+      line-height: 1;
+      min-width: 1.1em;
+    }
+    .etl-step .step-title { font-size: 0.8em; font-weight: 600; color: #fff; }
+    .etl-step .step-desc { font-size: 0.68em; color: var(--muted); margin-top: 0.1em; }
+
+    /* ── Warning conditions ── */
+    .condition-chip {
+      display: inline-block;
+      background: rgba(255,183,77,0.15);
+      border: 1px solid rgba(255,183,77,0.4);
+      border-radius: 6px;
+      padding: 0.12em 0.5em;
+      font-size: 0.68em;
+      color: var(--accent3);
+      margin: 0.1em;
+      font-family: monospace;
+    }
+
+    /* ── Screenshot placeholder ── */
+    .screenshot-placeholder {
+      background: rgba(255,255,255,0.04);
+      border: 2px dashed rgba(79,195,247,0.3);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: var(--muted);
+      font-size: 0.72em;
+      padding: 0.5em;
+    }
+    .screenshot-placeholder .ph-icon { font-size: 1.5em; margin-bottom: 0.2em; }
+
+    /* ── Numbers ── */
+    .big-numbers {
+      display: flex;
+      justify-content: center;
+      gap: 1em;
+      flex-wrap: wrap;
+      margin: 0.5em 0;
+    }
+    .big-num-box { text-align: center; }
+    .big-num { font-size: 1.9em; font-weight: 700; color: var(--accent); }
+    .big-num-label { font-size: 0.65em; color: var(--muted); line-height: 1.3; }
+
+    /* ── Utility ── */
+    .reveal h2 { font-size: 1.25em; color: #fff; margin-bottom: 0.25em; }
+    .reveal h3 { font-size: 0.95em; color: var(--accent); margin-bottom: 0.25em; }
+    .reveal ul { margin: 0; }
+    .reveal ul li { font-size: 0.72em; color: #ccc; margin-bottom: 0.2em; }
+    .accent { color: var(--accent); }
+    .green { color: var(--accent2); }
+    .orange { color: var(--accent3); }
+    .small { font-size: 0.68em; color: var(--muted); }
+
+    /* Two-column layout */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8em; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5em; }
+  </style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ===================================================
+     SLIDE 1 — Title
+=================================================== -->
+<section class="slide-title">
+  <div class="project-name">Weather ETL System</div>
+  <div class="subtitle">
+    A real-time weather data pipeline with automated alerts &amp; dashboarding
+  </div>
+  <div class="pills">
+    <span class="pill">Apache Airflow</span>
+    <span class="pill">PostgreSQL</span>
+    <span class="pill">FastAPI</span>
+    <span class="pill">Docker</span>
+    <span class="pill">Nginx</span>
+    <span class="pill green">Open-Meteo API</span>
+  </div>
+  <div class="author-box">
+    <div class="author-name">Marvin Lorff</div>
+    <div class="school">neuefische — Data Engineering Bootcamp · Capstone Project</div>
+  </div>
+  <div class="date-badge">March 2026</div>
+</section>
+
+<!-- ===================================================
+     SLIDE 2 — Project Overview
+=================================================== -->
+<section>
+  <div class="section-label">Overview</div>
+  <h2>What is Weather ETL?</h2>
+  <p class="small" style="margin-bottom:0.8em">
+    An end-to-end data engineering project that automatically fetches, processes,
+    and stores weather forecasts — and notifies users when their custom conditions are met.
+  </p>
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">🌍</div>
+      <div class="card-value">~75 Cities</div>
+      <div class="card-label">Germany, Austria &amp; Switzerland</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">⏱️</div>
+      <div class="card-value">Hourly</div>
+      <div class="card-label">Automated pipeline runs</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <div class="card-value">7 Days</div>
+      <div class="card-label">Daily + 168h hourly forecasts</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔔</div>
+      <div class="card-value">Alerts</div>
+      <div class="card-label">Email notifications on trigger</div>
+    </div>
+  </div>
+  <div class="flow" style="margin-top:1em">
+    <div class="flow-box"><div class="fb-icon">🌐</div><div class="fb-label">Open-Meteo API</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box"><div class="fb-icon">⚙️</div><div class="fb-label">Airflow ETL</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box"><div class="fb-icon">🗄️</div><div class="fb-label">PostgreSQL</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box"><div class="fb-icon">🚀</div><div class="fb-label">FastAPI</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box"><div class="fb-icon">🖥️</div><div class="fb-label">Dashboard</div></div>
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 3 — Technology Stack
+=================================================== -->
+<section>
+  <div class="section-label">Stack</div>
+  <h2>Technology Stack</h2>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.45em; font-size:0.82em">
+
+    <div style="display:flex; align-items:center; gap:0.7em; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.5em 0.8em">
+      <span style="font-size:1.6em">⚙️</span>
+      <div>
+        <div style="font-weight:600; color:#fff">Apache Airflow</div>
+        <div style="font-size:0.78em; color:var(--muted)">Pipeline orchestration · DAG scheduling · XCom · Retry logic</div>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:0.7em; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.5em 0.8em">
+      <span style="font-size:1.6em">🗄️</span>
+      <div>
+        <div style="font-weight:600; color:#fff">PostgreSQL 15</div>
+        <div style="font-size:0.78em; color:var(--muted)">Primary datastore · 6 tables · JSONB · UPSERT pattern</div>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:0.7em; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.5em 0.8em">
+      <span style="font-size:1.6em">🚀</span>
+      <div>
+        <div style="font-weight:600; color:#fff">FastAPI</div>
+        <div style="font-size:0.78em; color:var(--muted)">REST API · JWT auth · 18 endpoints · SQLAlchemy ORM</div>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:0.7em; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.5em 0.8em">
+      <span style="font-size:1.6em">🌐</span>
+      <div>
+        <div style="font-weight:600; color:#fff">Nginx + Vanilla JS</div>
+        <div style="font-size:0.78em; color:var(--muted)">Static frontend · Station search · Chart.js dashboard</div>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:0.7em; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.5em 0.8em">
+      <span style="font-size:1.6em">🐳</span>
+      <div>
+        <div style="font-weight:600; color:#fff">Docker Compose</div>
+        <div style="font-size:0.78em; color:var(--muted)">6 services · Isolated containers · Single-command deploy</div>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:0.7em; background:var(--bg-card); border:1px solid rgba(129,199,132,0.4); border-radius:8px; padding:0.5em 0.8em">
+      <span style="font-size:1.6em">🌤️</span>
+      <div>
+        <div style="font-weight:600; color:#fff">Open-Meteo API</div>
+        <div style="font-size:0.78em; color:var(--muted)">Free · No API key · 7-day forecast · Daily + hourly</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 4 — ETL Pipeline Overview
+=================================================== -->
+<section>
+  <div class="section-label">ETL Pipeline</div>
+  <h2>The Pipeline at a Glance</h2>
+  <p class="small" style="margin-bottom:0.3em">
+    Two Airflow DAGs — one for weather ingestion, one for warning evaluation.
+  </p>
+
+  <div style="display:flex; gap:0.6em; margin-bottom:0.4em">
+    <div style="flex:1; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.45em 0.7em">
+      <div style="font-size:0.75em; color:var(--accent); font-weight:600; margin-bottom:0.25em">DAG 1 — weather_etl (every 2h)</div>
+      <div class="flow" style="flex-wrap:nowrap; gap:0">
+        <div class="flow-box" style="min-width:70px; font-size:0.65em">
+          <div class="fb-icon">📡</div><div class="fb-label">Extract</div>
+        </div>
+        <div class="flow-arrow" style="font-size:0.9em">→</div>
+        <div class="flow-box" style="min-width:70px; font-size:0.65em">
+          <div class="fb-icon">🔄</div><div class="fb-label">Transform</div>
+        </div>
+        <div class="flow-arrow" style="font-size:0.9em">→</div>
+        <div class="flow-box" style="min-width:70px; font-size:0.65em">
+          <div class="fb-icon">💾</div><div class="fb-label">Load</div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1; background:var(--bg-card); border:1px solid rgba(129,199,132,0.4); border-radius:8px; padding:0.45em 0.7em">
+      <div style="font-size:0.75em; color:var(--accent2); font-weight:600; margin-bottom:0.25em">DAG 2 — check_warnings (every 1h)</div>
+      <div class="flow" style="flex-wrap:nowrap; gap:0">
+        <div class="flow-box" style="min-width:70px; font-size:0.65em; border-color:rgba(129,199,132,0.3)">
+          <div class="fb-icon">🗄️</div><div class="fb-label">Read DB</div>
+        </div>
+        <div class="flow-arrow" style="font-size:0.9em; color:var(--accent2)">→</div>
+        <div class="flow-box" style="min-width:70px; font-size:0.65em; border-color:rgba(129,199,132,0.3)">
+          <div class="fb-icon">⚖️</div><div class="fb-label">Evaluate</div>
+        </div>
+        <div class="flow-arrow" style="font-size:0.9em; color:var(--accent2)">→</div>
+        <div class="flow-box" style="min-width:70px; font-size:0.65em; border-color:rgba(129,199,132,0.3)">
+          <div class="fb-icon">📧</div><div class="fb-label">Notify</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="etl-step">
+    <div class="step-num">E</div>
+    <div>
+      <div class="step-title">Extract — Open-Meteo API</div>
+      <div class="step-desc">
+        GET request to <span class="accent">api.open-meteo.com/v1/forecast</span> with lat/lon.
+        Returns 7-day daily (10 variables) + 168-hour hourly (17 variables incl. soil data).
+        Result pushed to Airflow <span class="accent">XCom</span> for the next task.
+      </div>
+    </div>
+  </div>
+  <div class="etl-step">
+    <div class="step-num">T</div>
+    <div>
+      <div class="step-title">Transform — Reshape &amp; Enrich</div>
+      <div class="step-desc">
+        API arrays unpacked into flat dicts (one dict = one row).
+        WMO weather codes mapped to human-readable descriptions.
+        Alert rules loaded from YAML and evaluated with AND logic against daily records.
+      </div>
+    </div>
+  </div>
+  <div class="etl-step">
+    <div class="step-num">L</div>
+    <div>
+      <div class="step-title">Load — UPSERT into PostgreSQL</div>
+      <div class="step-desc">
+        Daily and hourly records written with <span class="accent">ON CONFLICT DO UPDATE</span> (city + date unique key).
+        Previous alerts for the city are deactivated; fresh alerts inserted.
+        No duplicate data accumulates across pipeline runs.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 5 — Extract in Detail
+=================================================== -->
+<section>
+  <div class="section-label">ETL — Extract</div>
+  <h2>Extracting Weather Data</h2>
+  <div class="two-col">
+    <div>
+      <h3>Daily Variables (7 days)</h3>
+      <ul>
+        <li>Temperature max / min (°C)</li>
+        <li>Precipitation sum (mm)</li>
+        <li>Snowfall sum (cm)</li>
+        <li>Wind speed max / Wind gusts max (km/h)</li>
+        <li>UV Index max</li>
+        <li>WMO weather code</li>
+        <li>Sunrise / Sunset times</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Hourly Variables (168 hours)</h3>
+      <ul>
+        <li>Temperature &amp; Apparent temperature (°C)</li>
+        <li>Precipitation / Rain / Snowfall</li>
+        <li>Wind speed &amp; direction</li>
+        <li>Relative humidity (%)</li>
+        <li>Sunshine duration (sec/hour)</li>
+        <li>Soil temperature: 0 cm / 6 cm / 18 cm</li>
+        <li>Soil moisture: 0–1 / 1–3 / 3–9 cm layers (m³/m³)</li>
+      </ul>
+    </div>
+  </div>
+  <div style="margin-top:0.8em; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.7em; font-size:0.72em; color:var(--muted)">
+    <span class="accent">XCom payload:</span>
+    &nbsp;city · latitude · longitude · fetched_at (UTC) · full Open-Meteo JSON response
+    <br/>
+    <span class="accent">API:</span> Free tier, no API key required. Timezone set to Europe/Berlin for correct local time strings.
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 6 — Transform in Detail
+=================================================== -->
+<section>
+  <div class="section-label">ETL — Transform</div>
+  <h2>Transforming the Raw Data</h2>
+
+  <div class="etl-step">
+    <div class="step-num" style="font-size:1.3em">1</div>
+    <div>
+      <div class="step-title">Unpack API Arrays → Flat Row Dicts</div>
+      <div class="step-desc">
+        Open-Meteo returns columnar arrays (e.g. <code>temperature_2m_max: [12.1, 15.3, ...]</code>).
+        Transform zips all arrays by index into individual row dicts — one dict per calendar day or hour.
+      </div>
+    </div>
+  </div>
+
+  <div class="etl-step">
+    <div class="step-num" style="font-size:1.3em">2</div>
+    <div>
+      <div class="step-title">WMO Code Enrichment</div>
+      <div class="step-desc">
+        Each row's numeric WMO weather code (e.g. <span class="orange">63</span>) is translated
+        to a human-readable string (<span class="accent">"Moderate Rain"</span>) using a built-in lookup table
+        covering all 30 WMO codes.
+      </div>
+    </div>
+  </div>
+
+  <div class="etl-step">
+    <div class="step-num" style="font-size:1.3em">3</div>
+    <div>
+      <div class="step-title">Alert Rule Evaluation (YAML Config)</div>
+      <div class="step-desc">
+        Alert thresholds are loaded from <span class="accent">alerts_config.yaml</span> (not hardcoded).
+        Each rule defines: <span class="orange">name, severity, conditions (AND logic), message</span>.
+        Triggered alerts are included in the XCom payload alongside daily/hourly records.
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:0.5em; font-size:0.7em; color:var(--muted); text-align:center">
+    Example alert rules:
+    <span class="condition-chip">temperature_max &gt; 35 → danger</span>
+    <span class="condition-chip">precipitation_sum &gt; 20 → warning</span>
+    <span class="condition-chip">wind_speed_max &gt; 60 → danger</span>
+    <span class="condition-chip">snowfall_sum &gt; 10 → info</span>
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 7 — Load in Detail
+=================================================== -->
+<section>
+  <div class="section-label">ETL — Load</div>
+  <h2>Loading Data into PostgreSQL</h2>
+
+  <div class="two-col" style="margin-bottom:0.6em">
+    <div>
+      <h3>UPSERT Pattern</h3>
+      <ul>
+        <li>Unique constraint: <span class="accent">(city, forecast_date)</span> for daily</li>
+        <li>Unique constraint: <span class="accent">(city, forecast_time)</span> for hourly</li>
+        <li>On conflict → update all fields in-place</li>
+        <li>No accumulating duplicates across runs</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Alert Lifecycle</h3>
+      <ul>
+        <li>Before insert: all previous alerts for the city set to <span class="orange">is_active = false</span></li>
+        <li>Fresh alerts from current run inserted as <span class="accent">is_active = true</span></li>
+        <li>Dashboard always shows current forecast state only</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.8em; font-size:0.72em">
+    <div style="color:var(--accent); font-weight:600; margin-bottom:0.4em">What gets written per pipeline run:</div>
+    <div class="flow" style="flex-wrap:nowrap">
+      <div class="flow-box" style="min-width:110px">
+        <div class="fb-label">7 rows</div>
+        <div style="color:#fff; font-size:0.95em">weather_daily</div>
+      </div>
+      <div class="flow-arrow">+</div>
+      <div class="flow-box" style="min-width:110px">
+        <div class="fb-label">168 rows</div>
+        <div style="color:#fff; font-size:0.95em">weather_hourly</div>
+      </div>
+      <div class="flow-arrow">+</div>
+      <div class="flow-box" style="min-width:110px">
+        <div class="fb-label">n rows (if triggered)</div>
+        <div style="color:#fff; font-size:0.95em">weather_alerts</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 8 — PostgreSQL Schema Overview
+=================================================== -->
+<section>
+  <div class="section-label">Database</div>
+  <h2>PostgreSQL Schema — 6 Tables</h2>
+
+  <div class="net-grid" style="grid-template-columns: repeat(3,1fr); gap:0.6em; font-size:0.72em">
+    <div class="net-box">
+      <div class="nb-icon">📅</div>
+      <div class="nb-name">weather_daily</div>
+      <div class="nb-port">13 columns</div>
+      <div class="nb-desc">Daily forecast per city · UPSERT on (city, date)</div>
+    </div>
+    <div class="net-box">
+      <div class="nb-icon">🕐</div>
+      <div class="nb-name">weather_hourly</div>
+      <div class="nb-port">21 columns</div>
+      <div class="nb-desc">Hourly forecast + soil data · UPSERT on (city, time)</div>
+    </div>
+    <div class="net-box">
+      <div class="nb-icon">🔔</div>
+      <div class="nb-name">weather_alerts</div>
+      <div class="nb-port">10 columns</div>
+      <div class="nb-desc">System-generated alerts · JSONB snapshot of trigger</div>
+    </div>
+    <div class="net-box highlight">
+      <div class="nb-icon">📍</div>
+      <div class="nb-name">stations</div>
+      <div class="nb-port">6 columns</div>
+      <div class="nb-desc">~75 cities pre-seeded · lat/lon for API calls</div>
+    </div>
+    <div class="net-box highlight">
+      <div class="nb-icon">👤</div>
+      <div class="nb-name">users</div>
+      <div class="nb-port">6 columns</div>
+      <div class="nb-desc">bcrypt-hashed passwords · email for notifications</div>
+    </div>
+    <div class="net-box highlight">
+      <div class="nb-icon">⚠️</div>
+      <div class="nb-name">warnings</div>
+      <div class="nb-port">10 columns</div>
+      <div class="nb-desc">User rules · JSONB conditions + validity · active flag</div>
+    </div>
+  </div>
+
+  <div style="margin-top:0.7em; font-size:0.68em; color:var(--muted); text-align:center">
+    <span style="border:1px solid var(--border); border-radius:4px; padding:0.15em 0.5em;">ETL tables</span> &nbsp;
+    <span style="border:1px solid rgba(129,199,132,0.4); border-radius:4px; padding:0.15em 0.5em; color:var(--accent2)">Application tables</span> &nbsp;&nbsp;
+    All timestamps stored WITH TIME ZONE (UTC) &nbsp;·&nbsp; Numeric precision: DECIMAL(5,2) for °C
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 9 — Schema Detail: ETL Tables
+=================================================== -->
+<section>
+  <div class="section-label">Database — Schema Detail</div>
+  <h2>Core ETL Tables</h2>
+  <div class="two-col">
+    <div>
+      <h3>weather_daily</h3>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Unit</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag tag-pk">PK</span> id</td><td>INTEGER</td><td>—</td></tr>
+          <tr><td>city</td><td>VARCHAR(100)</td><td>—</td></tr>
+          <tr><td>forecast_date</td><td>DATE</td><td>—</td></tr>
+          <tr><td>temperature_max</td><td>DECIMAL(5,2)</td><td>°C</td></tr>
+          <tr><td>temperature_min</td><td>DECIMAL(5,2)</td><td>°C</td></tr>
+          <tr><td>precipitation_sum</td><td>DECIMAL(6,2)</td><td>mm</td></tr>
+          <tr><td>snowfall_sum</td><td>DECIMAL(6,2)</td><td>cm</td></tr>
+          <tr><td>wind_speed_max</td><td>DECIMAL(6,2)</td><td>km/h</td></tr>
+          <tr><td>wind_gusts_max</td><td>DECIMAL(6,2)</td><td>km/h</td></tr>
+          <tr><td>uv_index_max</td><td>DECIMAL(4,2)</td><td>—</td></tr>
+          <tr><td>weather_code</td><td>INTEGER</td><td>WMO</td></tr>
+          <tr><td>sunrise / sunset</td><td>TIMESTAMPTZ</td><td>UTC</td></tr>
+          <tr><td>created_at</td><td>TIMESTAMPTZ</td><td>UTC</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3>weather_hourly (key columns)</h3>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Unit</th></tr></thead>
+        <tbody>
+          <tr><td>temperature</td><td>DECIMAL(5,2)</td><td>°C</td></tr>
+          <tr><td>feels_like</td><td>DECIMAL(5,2)</td><td>°C</td></tr>
+          <tr><td>precipitation</td><td>DECIMAL(5,2)</td><td>mm</td></tr>
+          <tr><td>wind_speed</td><td>DECIMAL(6,2)</td><td>km/h</td></tr>
+          <tr><td>wind_direction</td><td>INTEGER</td><td>degrees</td></tr>
+          <tr><td>humidity</td><td>INTEGER</td><td>%</td></tr>
+          <tr><td>sunshine_duration</td><td>DECIMAL(6,2)</td><td>sec</td></tr>
+          <tr><td>soil_temperature_0cm</td><td>DECIMAL(5,2)</td><td>°C</td></tr>
+          <tr><td>soil_temperature_6cm</td><td>DECIMAL(5,2)</td><td>°C</td></tr>
+          <tr><td>soil_temperature_18cm</td><td>DECIMAL(5,2)</td><td>°C</td></tr>
+          <tr><td>soil_moisture_0_1cm</td><td>DECIMAL(8,6)</td><td>m³/m³</td></tr>
+          <tr><td>soil_moisture_1_3cm</td><td>DECIMAL(8,6)</td><td>m³/m³</td></tr>
+          <tr><td>soil_moisture_3_9cm</td><td>DECIMAL(8,6)</td><td>m³/m³</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 10 — Schema Detail: Application Tables
+=================================================== -->
+<section>
+  <div class="section-label">Database — Schema Detail</div>
+  <h2>Application Tables</h2>
+  <div class="two-col">
+    <div>
+      <h3>users</h3>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Type</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag tag-pk">PK</span> id</td><td>INTEGER</td></tr>
+          <tr><td>email</td><td>VARCHAR(255) UNIQUE</td></tr>
+          <tr><td>username</td><td>VARCHAR(100) UNIQUE</td></tr>
+          <tr><td>hashed_password</td><td>VARCHAR(255) — bcrypt</td></tr>
+          <tr><td>is_active</td><td>BOOLEAN</td></tr>
+          <tr><td>created_at</td><td>TIMESTAMPTZ</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top:0.8em">weather_alerts</h3>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>alert_name</td><td>From YAML config</td></tr>
+          <tr><td>severity</td><td>info / warning / danger</td></tr>
+          <tr><td>message</td><td>Human-readable text</td></tr>
+          <tr><td>condition_met</td><td><span class="tag tag-json">JSONB</span> — value + threshold snapshot</td></tr>
+          <tr><td>is_active</td><td>Only latest run = true</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3>warnings (user-defined)</h3>
+      <table class="schema-table">
+        <thead><tr><th>Column</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag tag-fk">FK</span> user_id</td><td>→ users.id CASCADE DELETE</td></tr>
+          <tr><td><span class="tag tag-fk">FK</span> station_id</td><td>→ stations.id SET NULL</td></tr>
+          <tr><td>city</td><td>Target city name</td></tr>
+          <tr><td>name</td><td>User-chosen label</td></tr>
+          <tr><td>conditions</td><td><span class="tag tag-json">JSONB</span> array of rules</td></tr>
+          <tr><td>validity</td><td><span class="tag tag-json">JSONB</span> — date_range / weekdays / months</td></tr>
+          <tr><td>active</td><td>Enable / disable toggle</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:0.6em; font-size:0.68em; color:var(--muted)">
+        Example condition:
+        <span class="condition-chip">temperature_max &gt; 32</span>
+        <span class="condition-chip">precipitation_sum &lt; 1</span>
+        <br/>Evaluated with AND logic by the check_warnings DAG
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 11 — User Warning Pipeline
+=================================================== -->
+<section>
+  <div class="section-label">Feature</div>
+  <h2>User Warning Pipeline</h2>
+  <p class="small" style="margin-bottom:0.6em">
+    Users configure custom alert rules — the second Airflow DAG checks them hourly and sends email notifications.
+  </p>
+  <div class="flow" style="margin-bottom:0.8em; flex-wrap:wrap; gap:0.3em">
+    <div class="flow-box" style="min-width:100px">
+      <div class="fb-icon">🖱️</div>
+      <div class="fb-label">User creates warning<br/>in dashboard UI</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="min-width:100px">
+      <div class="fb-icon">🗄️</div>
+      <div class="fb-label">Stored as JSONB<br/>in warnings table</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="min-width:100px">
+      <div class="fb-icon">⚙️</div>
+      <div class="fb-label">Airflow DAG runs<br/>every hour</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="min-width:100px">
+      <div class="fb-icon">⚖️</div>
+      <div class="fb-label">Conditions checked<br/>vs. weather_daily</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="min-width:100px">
+      <div class="fb-icon">📧</div>
+      <div class="fb-label">Email sent<br/>via SMTP</div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div>
+      <h3>Condition Types</h3>
+      <ul>
+        <li><span class="accent">Parameters:</span> temp max/min, precipitation, snowfall, wind, gusts, UV</li>
+        <li><span class="accent">Comparators:</span> &gt; &gt;= &lt; &lt;= ==</li>
+        <li><span class="accent">Logic:</span> AND across all conditions</li>
+      </ul>
+      <h3 style="margin-top:0.6em">Validity Modes</h3>
+      <ul>
+        <li><span class="orange">date_range</span> — from / to specific dates</li>
+        <li><span class="orange">weekdays</span> — e.g. Saturday &amp; Sunday only</li>
+        <li><span class="orange">months</span> — e.g. January &amp; February only</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Pre-built Templates</h3>
+      <div style="margin-top:0.3em">
+        <span class="condition-chip">Heatwave: temp_max &gt; 32°C</span><br/>
+        <span class="condition-chip">Frost: temp_min &lt; 0°C</span><br/>
+        <span class="condition-chip">Heavy Rain: precip &gt; 20mm</span><br/>
+        <span class="condition-chip">Storm: wind &gt; 60 km/h</span><br/>
+        <span class="condition-chip">Snowfall: snow &gt; 10 cm</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 12 — Network / Infrastructure
+=================================================== -->
+<section>
+  <div class="section-label">Infrastructure</div>
+  <h2>Docker Network Architecture</h2>
+  <p class="small" style="margin-bottom:0.7em">
+    All services run in a single Docker Compose stack on a Linux server — one command to deploy everything.
+  </p>
+  <div class="net-grid" style="grid-template-columns: repeat(3,1fr)">
+    <div class="net-box">
+      <div class="nb-icon">🌐</div>
+      <div class="nb-name">Nginx Frontend</div>
+      <div class="nb-port">:80</div>
+      <div class="nb-desc">Static HTML/JS · Station search · Dashboard</div>
+    </div>
+    <div class="net-box">
+      <div class="nb-icon">🚀</div>
+      <div class="nb-name">FastAPI Backend</div>
+      <div class="nb-port">:8000</div>
+      <div class="nb-desc">REST API · JWT Auth · SQLAlchemy ORM</div>
+    </div>
+    <div class="net-box">
+      <div class="nb-icon">🗄️</div>
+      <div class="nb-name">PostgreSQL 15</div>
+      <div class="nb-port">:5432</div>
+      <div class="nb-desc">Primary datastore · Persistent volume</div>
+    </div>
+    <div class="net-box">
+      <div class="nb-icon">⚙️</div>
+      <div class="nb-name">Airflow Webserver</div>
+      <div class="nb-port">:8080</div>
+      <div class="nb-desc">DAG monitoring · Run history</div>
+    </div>
+    <div class="net-box">
+      <div class="nb-icon">🕐</div>
+      <div class="nb-name">Airflow Scheduler</div>
+      <div class="nb-port">internal</div>
+      <div class="nb-desc">DAG execution · Retry logic</div>
+    </div>
+    <div class="net-box">
+      <div class="nb-icon">📬</div>
+      <div class="nb-name">Mailhog / SMTP</div>
+      <div class="nb-port">:1025 / :8025</div>
+      <div class="nb-desc">SMTP catch-all · Email preview UI</div>
+    </div>
+  </div>
+  <div style="margin-top:0.7em; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:0.6em; font-size:0.7em; color:var(--muted)">
+    All services share an internal Docker network &nbsp;·&nbsp;
+    Secrets via <span class="accent">.env</span> file &nbsp;·&nbsp;
+    Backend runs as <span class="accent">non-root user</span> &nbsp;·&nbsp;
+    Data persisted in named Docker volumes &nbsp;·&nbsp;
+    Linux Server network diagram to be added after server deployment
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 13 — Dashboard Screenshots
+=================================================== -->
+<section>
+  <div class="section-label">Demo</div>
+  <h2>Dashboard &amp; Features</h2>
+  <div class="two-col" style="gap:0.7em">
+    <div class="screenshot-placeholder" style="height:220px">
+      <div class="ph-icon">🔍</div>
+      <div><strong>Station Search</strong></div>
+      <div style="font-size:0.85em; margin-top:0.3em">
+        Landing page · search by city name<br/>
+        Autocomplete from ~75 stations
+      </div>
+    </div>
+    <div class="screenshot-placeholder" style="height:220px">
+      <div class="ph-icon">📊</div>
+      <div><strong>Weather Dashboard</strong></div>
+      <div style="font-size:0.85em; margin-top:0.3em">
+        7-day forecast · hourly chart<br/>
+        Temperature, wind, precipitation
+      </div>
+    </div>
+    <div class="screenshot-placeholder" style="height:220px">
+      <div class="ph-icon">⚠️</div>
+      <div><strong>Warning Builder</strong></div>
+      <div style="font-size:0.85em; margin-top:0.3em">
+        Custom conditions · validity modes<br/>
+        Pre-built templates
+      </div>
+    </div>
+    <div class="screenshot-placeholder" style="height:220px">
+      <div class="ph-icon">📬</div>
+      <div><strong>Email Notification</strong></div>
+      <div style="font-size:0.85em; margin-top:0.3em">
+        Forecast value vs. threshold<br/>
+        Station · Warning name · Date
+      </div>
+    </div>
+  </div>
+  <p class="small" style="margin-top:0.5em; text-align:center; font-style:italic">
+    Replace placeholders with screenshots before presenting
+  </p>
+</section>
+
+<!-- ===================================================
+     SLIDE 14 — Key Numbers
+=================================================== -->
+<section>
+  <div class="section-label">Summary</div>
+  <h2>By the Numbers</h2>
+  <div class="big-numbers">
+    <div class="big-num-box">
+      <div class="big-num">~75</div>
+      <div class="big-num-label">Pre-seeded stations</div>
+    </div>
+    <div class="big-num-box">
+      <div class="big-num">6</div>
+      <div class="big-num-label">PostgreSQL tables</div>
+    </div>
+    <div class="big-num-box">
+      <div class="big-num">175</div>
+      <div class="big-num-label">Rows per pipeline run<br/><span style="font-size:0.6em">(7 daily + 168 hourly)</span></div>
+    </div>
+    <div class="big-num-box">
+      <div class="big-num">2</div>
+      <div class="big-num-label">Airflow DAGs</div>
+    </div>
+    <div class="big-num-box">
+      <div class="big-num">18</div>
+      <div class="big-num-label">API endpoints</div>
+    </div>
+    <div class="big-num-box">
+      <div class="big-num">6</div>
+      <div class="big-num-label">Docker services</div>
+    </div>
+  </div>
+
+  <div style="margin-top:0.8em; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:0.8em; font-size:0.75em;">
+    <div style="display:flex; justify-content:space-around; flex-wrap:wrap; gap:0.5em">
+      <div>✅ <span class="accent">OWASP</span> security hardening (JWT, bcrypt, non-root container, XSS prevention)</div>
+      <div>✅ <span class="accent">UPSERT</span> pattern — idempotent pipeline runs</div>
+      <div>✅ <span class="accent">JSONB</span> conditions — flexible without schema changes</div>
+      <div>✅ <span class="accent">Configurable</span> alerts via YAML — no redeploy needed</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 15 — Thank You
+=================================================== -->
+<section class="slide-title">
+  <div class="project-name" style="font-size:2em">Thank You</div>
+  <div class="subtitle" style="margin-bottom:1em">Weather ETL — Capstone Project</div>
+
+  <div class="cards" style="justify-content:center; margin-bottom:1em">
+    <div class="card" style="min-width:180px; max-width:250px">
+      <div class="card-icon">💻</div>
+      <div class="card-value">GitHub</div>
+      <div class="card-label">github.com/ml271/weather_etl</div>
+    </div>
+    <div class="card" style="min-width:180px; max-width:250px">
+      <div class="card-icon">📚</div>
+      <div class="card-value">Stack</div>
+      <div class="card-label">Airflow · PostgreSQL · FastAPI · Docker · Nginx</div>
+    </div>
+  </div>
+
+  <div class="author-box">
+    <div class="author-name">Marvin Lorff</div>
+    <div class="school">neuefische — Data Engineering Bootcamp · Capstone Project · March 2026</div>
+  </div>
+
+  <div class="pills" style="margin-top:1em">
+    <span class="pill">Questions?</span>
+  </div>
+</section>
+
+</div><!-- .slides -->
+</div><!-- .reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    controls: true,
+    progress: true,
+    center: false,
+    transition: 'fade',
+    transitionSpeed: 'fast',
+    width: 1200,
+    height: 680,
+    margin: 0.02,
+    minScale: 0.2,
+    maxScale: 2.0,
+  });
+</script>
+</body>
+</html>

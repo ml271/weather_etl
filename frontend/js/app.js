@@ -29,7 +29,7 @@ const WMO_ICONS = {
 };
 
 const SEVERITY_ICONS = { danger:"🚨", warning:"⚠️", info:"ℹ️" };
-const WEEKDAYS = ["SO","MO","DI","MI","DO","FR","SA"];
+const WEEKDAYS = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
 
 let currentPlotHours = 96;
 let selectedSoilT = new Set(["0"]);
@@ -72,7 +72,7 @@ function getIcon(code) {
 function fmtDate(dateStr) {
   if (!dateStr) return "—";
   const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 
 // ─────────────────────────────────────────────────────
@@ -83,8 +83,8 @@ function renderSummary(data) {
   document.getElementById("cityName").textContent = data.city || "—";
   document.getElementById("lastUpdated").textContent =
     data.last_updated
-      ? "SYNC " + new Date(data.last_updated).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
-      : "KEIN SYNC";
+      ? "SYNC " + new Date(data.last_updated).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+      : "NO SYNC";
 
   const dot = document.getElementById("statusDot");
   dot.className = "status-dot " + (data.today ? "online" : "error");
@@ -99,7 +99,7 @@ function renderSummary(data) {
 function updateForecastRange() {
   const now = new Date();
   const end = new Date(now.getTime() + currentPlotHours * 3600 * 1000);
-  const fmt2 = d => d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
+  const fmt2 = d => d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
   document.getElementById("forecastRange").textContent = `${fmt2(now)} – ${fmt2(end)}`;
 }
 
@@ -108,13 +108,13 @@ function updateForecastRange() {
 // ─────────────────────────────────────────────────────
 
 const PARAM_LABELS = {
-  temperature_max:    "Max-Temp.",
-  temperature_min:    "Min-Temp.",
-  precipitation_sum:  "Niederschlag",
-  snowfall_sum:       "Schneefall",
+  temperature_max:    "Temp. max",
+  temperature_min:    "Temp. min",
+  precipitation_sum:  "Precipitation",
+  snowfall_sum:       "Snowfall",
   wind_speed_10m_max: "Wind",
-  wind_gusts_10m_max: "Böen",
-  uv_index_max:       "UV-Index",
+  wind_gusts_10m_max: "Gusts",
+  uv_index_max:       "UV Index",
 };
 const PARAM_UNITS = {
   temperature_max: "°C", temperature_min: "°C",
@@ -130,7 +130,7 @@ function renderTriggered(items) {
   countEl.dataset.count = items.length;
 
   if (!items.length) {
-    listEl.innerHTML = `<div class="no-alerts">Keine aktiven Warnungen ✓</div>`;
+    listEl.innerHTML = `<div class="no-alerts">No active warnings ✓</div>`;
     return;
   }
   listEl.innerHTML = "";
@@ -138,7 +138,7 @@ function renderTriggered(items) {
     const chip = document.createElement("div");
     chip.className = "alert-chip warning";
     chip.style.cursor = "pointer";
-    chip.title = "Klicken zum Bearbeiten";
+    chip.title = "Click to edit";
     chip.addEventListener("click", () => {
       window.location.href = `warnings.html?edit=${encodeURIComponent(item.warning_id)}`;
     });
@@ -179,7 +179,7 @@ function renderSavedWarnings(warnings) {
   const el = document.getElementById("savedWarningsList");
   if (!el) return;
   if (!warnings || !warnings.length) {
-    el.innerHTML = `<div class="no-alerts">Keine gespeicherten Warnungen</div>`;
+    el.innerHTML = `<div class="no-alerts">No saved warnings</div>`;
     return;
   }
   el.innerHTML = "";
@@ -187,7 +187,7 @@ function renderSavedWarnings(warnings) {
     const chip = document.createElement("div");
     chip.className = "alert-chip info";
     chip.style.cursor = "pointer";
-    chip.title = "Klicken zum Bearbeiten";
+    chip.title = "Click to edit";
     chip.addEventListener("click", () => {
       window.location.href = `warnings.html?edit=${encodeURIComponent(w.id)}`;
     });
@@ -218,7 +218,7 @@ function renderAlerts(alerts) {
   const banner  = document.getElementById("alertBanner");
 
   if (!alerts.length) {
-    listEl.innerHTML = `<div class="no-alerts">Keine Wetterwarnungen ✓</div>`;
+    listEl.innerHTML = `<div class="no-alerts">No weather alerts ✓</div>`;
     banner.style.display = "none";
     return;
   }
@@ -226,7 +226,7 @@ function renderAlerts(alerts) {
   const dangers = alerts.filter(a => a.severity === "danger");
   if (dangers.length > 0) {
     banner.style.display = "block";
-    banner.textContent = `⚡ ACHTUNG: ${dangers.map(d => d.alert_name).join(" · ")}`;
+    banner.textContent = `⚡ ALERT: ${dangers.map(d => d.alert_name).join(" · ")}`;
   } else {
     banner.style.display = "none";
   }
@@ -278,7 +278,7 @@ function renderForecast(records) {
 
     return `
       <div class="forecast-day ${isToday ? "today" : ""}" onclick="openDayModal('${r.forecast_date}')">
-        <span class="f-weekday">${isToday ? "HEUTE" : weekday}</span>
+        <span class="f-weekday">${isToday ? "TODAY" : weekday}</span>
         <span class="f-icon">${getIcon(r.weather_code)}</span>
         <span class="f-max">${fmt(r.temperature_max, "°")}</span>
         <span class="f-min">${fmt(r.temperature_min, "°")}</span>
@@ -300,18 +300,18 @@ window.openDayModal = function(dateStr) {
   const title   = document.getElementById("modalTitle");
 
   const d  = new Date(dateStr + "T12:00:00");
-  const dayNames = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
-  title.textContent = `${dayNames[d.getDay()].toUpperCase()}  ·  ${d.toLocaleDateString("de-DE", { day:"2-digit", month:"long", year:"numeric" })}`;
+  const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  title.textContent = `${dayNames[d.getDay()].toUpperCase()}  ·  ${d.toLocaleDateString("en-GB", { day:"2-digit", month:"long", year:"numeric" })}`;
 
   img.classList.remove("loaded");
   img.src = "";
   loading.style.display = "block";
-  loading.textContent = "Lade Stundendaten...";
+  loading.textContent = "Loading hourly data...";
   modal.classList.add("open");
   document.body.style.overflow = "hidden";
 
   img.onload  = () => { loading.style.display = "none"; img.classList.add("loaded"); };
-  img.onerror = () => { loading.textContent = "Keine Stundendaten für diesen Tag."; };
+  img.onerror = () => { loading.textContent = "No hourly data for this day."; };
   img.src = `${API}${apiPath(`/charts/day-detail?date=${dateStr}`)}&_t=${Date.now()}`;
 };
 
@@ -335,7 +335,7 @@ function loadHourlyPlot(hours) {
   img.classList.remove("loaded");
   img.src = "";  // clear first so browser always fires onload for the new src
   loading.style.display = "block";
-  loading.textContent = "Lade Diagramm...";
+  loading.textContent = "Loading chart...";
 
   const soilT = [...selectedSoilT].sort().join(",");
   const soilM = [...selectedSoilM].sort().join(",");
@@ -346,7 +346,7 @@ function loadHourlyPlot(hours) {
     img.classList.add("loaded");
   };
   img.onerror = () => {
-    loading.textContent = "Keine Daten – ETL-Job ausführen!";
+    loading.textContent = "No data – run ETL job!";
   };
   img.src = url;
 }
@@ -400,7 +400,7 @@ async function loadForecast() {
     renderForecast(data);
   } catch (e) {
     document.getElementById("forecastRow").innerHTML =
-      `<div class="forecast-loading">Keine Daten – ETL-Job ausführen!</div>`;
+      `<div class="forecast-loading">No data – run ETL job!</div>`;
   }
 }
 
@@ -452,16 +452,16 @@ async function init() {
 
     if (needsFetch) {
       document.getElementById("forecastRow").innerHTML =
-        `<div class="forecast-loading">⏳ Wetterdaten für ${CITY} werden geladen …</div>`;
+        `<div class="forecast-loading">⏳ Loading weather data for ${CITY} …</div>`;
       const plotLoading = document.getElementById("hourlyPlotLoading");
       plotLoading.style.display = "block";
-      plotLoading.textContent = "⏳ Wetterdaten werden geladen …";
+      plotLoading.textContent = "⏳ Loading weather data …";
       try {
         await fetchWeatherNow();
       } catch (fetchErr) {
         document.getElementById("forecastRow").innerHTML =
-          `<div class="forecast-loading">Fehler beim Laden – bitte Seite neu laden.</div>`;
-        plotLoading.textContent = "Fehler beim Laden.";
+          `<div class="forecast-loading">Error loading data – please refresh.</div>`;
+        plotLoading.textContent = "Error loading.";
         return;
       }
     }

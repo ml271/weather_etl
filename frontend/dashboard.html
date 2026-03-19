@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -24,11 +24,11 @@
     </div>
     <div class="header-right">
       <div class="status-dot" id="statusDot"></div>
-      <span class="last-updated" id="lastUpdated">Verbinde...</span>
+      <span class="last-updated" id="lastUpdated">Connecting...</span>
 
       <!-- User menu -->
       <div class="user-menu-wrap">
-        <button class="user-menu-btn" id="userMenuBtn" title="Anmelden">
+        <button class="user-menu-btn" id="userMenuBtn" title="Sign in">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="8" r="4"/>
             <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
@@ -41,14 +41,14 @@
             <div class="user-panel-email" id="userPanelEmail"></div>
           </div>
           <div class="user-panel-section">
-            <div class="user-panel-section-label">AKTIVE WARNUNGEN</div>
+            <div class="user-panel-section-label">ACTIVE WARNINGS</div>
             <div id="userPanelWarnings" style="margin-bottom:.4rem;">
-              <div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);">Lädt…</div>
+              <div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);">Loading…</div>
             </div>
             <a href="warnings.html" style="font-size:10px;font-family:var(--font-mono);color:var(--accent);text-decoration:none;letter-spacing:.08em;">+ NEUE WARNUNG</a>
           </div>
           <div class="user-panel-footer">
-            <button class="user-panel-btn danger" onclick="userLogout()">ABMELDEN</button>
+            <button class="user-panel-btn danger" onclick="userLogout()">SIGN OUT</button>
           </div>
         </div>
       </div>
@@ -63,7 +63,7 @@
 
     <!-- ░░ LEFT SIDEBAR ░░ -->
     <aside class="sidebar">
-      <a href="index.html" class="back-link">← SUCHE</a>
+      <a href="index.html" class="back-link">← SEARCH</a>
 
       <div class="sidebar-city">
         <span class="station-label">WEATHER STATION</span>
@@ -73,21 +73,21 @@
       <div class="sidebar-divider"></div>
 
       <div class="sidebar-alerts">
-        <div class="card-label">GETRIGGERTE WARNUNGEN <span class="alert-count" id="alertCount">0</span></div>
+        <div class="card-label">TRIGGERED WARNINGS <span class="alert-count" id="alertCount">0</span></div>
         <div class="alerts-list" id="triggeredList">
-          <div class="no-alerts">Keine aktiven Warnungen ✓</div>
+          <div class="no-alerts">No active warnings ✓</div>
         </div>
 
         <div class="sidebar-divider" style="margin-top:.8rem;"></div>
-        <div class="card-label" style="margin-top:.6rem;">MEINE WARNUNGEN</div>
+        <div class="card-label" style="margin-top:.6rem;">MY WARNINGS</div>
         <div id="savedWarningsList">
-          <div class="no-alerts">Nicht eingeloggt</div>
+          <div class="no-alerts">Not signed in</div>
         </div>
 
         <div class="sidebar-divider" style="margin-top:.8rem;"></div>
-        <div class="card-label" style="margin-top:.6rem;">WETTERWARNUNGEN</div>
+        <div class="card-label" style="margin-top:.6rem;">WEATHER ALERTS</div>
         <div class="alerts-list" id="alertsList">
-          <div class="no-alerts">Keine Wetterwarnungen ✓</div>
+          <div class="no-alerts">No weather alerts ✓</div>
         </div>
       </div>
     </aside>
@@ -97,15 +97,15 @@
 
       <!-- 7-day forecast -->
       <section class="card card--forecast">
-        <div class="card-label">7-TAGE PROGNOSE</div>
+        <div class="card-label">7-DAY FORECAST</div>
         <div class="forecast-row" id="forecastRow">
-          <div class="forecast-loading">Lade...</div>
+          <div class="forecast-loading">Loading...</div>
         </div>
       </section>
 
       <!-- Hourly Plot (matplotlib PNG) -->
       <section class="card card--hourly-plot">
-        <div class="card-label">STÜNDLICHE PROGNOSE
+        <div class="card-label">HOURLY FORECAST
           <span class="plot-hours">
             <button class="toggle-btn" data-hours="24" onclick="switchPlotHours(24)">24h</button>
             <button class="toggle-btn" data-hours="48" onclick="switchPlotHours(48)">48h</button>
@@ -114,8 +114,8 @@
           </span>
         </div>
         <div class="hourly-plot-wrapper">
-          <img id="hourlyPlotImg" class="hourly-plot-img" src="" alt="Stündliche Prognose" />
-          <div class="hourly-plot-loading" id="hourlyPlotLoading">Lade Diagramm...</div>
+          <img id="hourlyPlotImg" class="hourly-plot-img" src="" alt="Hourly forecast" />
+          <div class="hourly-plot-loading" id="hourlyPlotLoading">Loading chart...</div>
         </div>
       </section>
 
@@ -123,22 +123,22 @@
 
     <!-- ░░ RIGHT LEGEND PANEL ░░ -->
     <aside class="legend-panel">
-      <div class="card-label">LEGENDE</div>
+      <div class="card-label">LEGEND</div>
 
       <div class="legend-group">
-        <div class="legend-group-title">TEMPERATUR</div>
+        <div class="legend-group-title">TEMPERATURE</div>
         <div class="legend-item">
-          <span class="legend-swatch" style="background:#ff5566;border-radius:50%;width:8px;height:8px"></span>Tagesmax
+          <span class="legend-swatch" style="background:#ff5566;border-radius:50%;width:8px;height:8px"></span>Daily max
         </div>
         <div class="legend-item">
-          <span class="legend-swatch" style="background:#4ad4ff;border-radius:50%;width:8px;height:8px"></span>Tagesmin
+          <span class="legend-swatch" style="background:#4ad4ff;border-radius:50%;width:8px;height:8px"></span>Daily min
         </div>
       </div>
 
       <div class="legend-divider"></div>
 
       <div class="legend-group">
-        <div class="legend-group-title">BODENTEMPERATUR</div>
+        <div class="legend-group-title">SOIL TEMPERATURE</div>
         <button class="legend-btn active" data-type="T" data-depth="0" onclick="toggleSoilDepth('T','0')">
           <span class="legend-swatch" style="background:#e8a05c"></span><span>0 cm</span>
         </button>
@@ -153,7 +153,7 @@
       <div class="legend-divider"></div>
 
       <div class="legend-group">
-        <div class="legend-group-title">BODENFEUCHTE</div>
+        <div class="legend-group-title">SOIL MOISTURE</div>
         <button class="legend-btn active" data-type="M" data-depth="0-1" onclick="toggleSoilDepth('M','0-1')">
           <span class="legend-swatch" style="background:#5bb8f5"></span><span>0–1 cm</span>
         </button>
@@ -177,7 +177,7 @@
       </div>
       <div class="modal-body">
         <img id="modalPlotImg" class="modal-plot-img" src="" alt="" />
-        <div class="modal-loading" id="modalLoading">Lade Stundendaten...</div>
+        <div class="modal-loading" id="modalLoading">Loading hourly data...</div>
       </div>
     </div>
   </div>

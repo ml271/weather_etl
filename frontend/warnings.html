@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Warning-Baukasten – Weather Data Visualisation</title>
+  <title>Warning Builder – Weather Data Visualisation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
@@ -431,15 +431,15 @@
 <header class="header">
   <div class="header-left">
     <a href="index.html" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;color:var(--accent);text-decoration:none;">
-      ← ZURÜCK
+      ← BACK
     </a>
   </div>
   <div class="header-center" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;color:var(--text-dim);">
-    WARNING-BAUKASTEN
+    WARNING BUILDER
   </div>
   <div class="header-right">
     <div class="user-menu-wrap" id="userMenuWrap">
-      <button class="user-menu-btn" id="userMenuBtn" title="Anmelden">
+      <button class="user-menu-btn" id="userMenuBtn" title="Sign in">
         <span class="user-online-dot"></span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
@@ -450,11 +450,11 @@
           <span id="userPanelUsername">—</span>
         </div>
         <div class="user-panel-section">
-          <div class="user-panel-label">E-Mail</div>
+          <div class="user-panel-label">Email</div>
           <div class="user-panel-value" id="userPanelEmail">—</div>
         </div>
         <div class="user-panel-footer">
-          <button class="user-panel-btn" onclick="userLogout()">ABMELDEN</button>
+          <button class="user-panel-btn" onclick="userLogout()">SIGN OUT</button>
         </div>
       </div>
     </div>
@@ -462,40 +462,40 @@
 </header>
 
 <div class="page-wrap">
-  <div class="page-title" id="builderTitle">Neue Warnung erstellen</div>
+  <div class="page-title" id="builderTitle">Create new warning</div>
 
   <!-- ── 3-column builder ── -->
   <div class="builder">
 
     <!-- LEFT: Station -->
     <div class="builder-col">
-      <div class="col-title">01 — Station / Ort</div>
+      <div class="col-title">01 — Station / Location</div>
 
       <!-- Search -->
       <div class="field">
-        <label>Ort suchen</label>
-        <input type="text" id="stationSearch" placeholder="z.B. Berlin, München …" autocomplete="off" />
+        <label>Search location</label>
+        <input type="text" id="stationSearch" placeholder="e.g. Berlin, Munich …" autocomplete="off" />
         <div class="station-results" id="stationResults"></div>
       </div>
 
       <!-- Selected station display -->
       <div class="station-selected" id="stationSelected">
         <span id="stationSelectedName">—</span>
-        <button class="station-clear-btn" id="stationClearBtn" title="Auswahl aufheben">×</button>
+        <button class="station-clear-btn" id="stationClearBtn" title="Clear selection">×</button>
       </div>
 
       <div style="font-size:11px;color:var(--text-dim);margin-top:.5rem;font-family:var(--font-mono);" id="stationHint">
-        Keine Station gewählt
+        No station selected
       </div>
     </div>
 
     <!-- MIDDLE: Conditions -->
     <div class="builder-col">
-      <div class="col-title">02 — Wetter-Bedingungen</div>
+      <div class="col-title">02 — Weather Conditions</div>
 
       <!-- Templates -->
       <div style="font-size:11px;color:var(--text-dim);margin-bottom:.4rem;font-family:var(--font-mono);">
-        Schnellstart-Vorlage
+        Quick-start template
       </div>
       <div class="template-grid" id="templateGrid">
         <!-- filled by JS -->
@@ -505,39 +505,39 @@
 
       <!-- New condition row -->
       <div style="font-size:11px;color:var(--text-dim);margin-bottom:.4rem;font-family:var(--font-mono);">
-        Bedingung hinzufügen
+        Add condition
       </div>
 
       <!-- Operator selector (only shown when at least 1 condition exists) -->
       <div class="new-op-row" id="newOpRow">
-        <button class="new-op-btn active" id="newOpAnd"    onclick="setNewOp('AND')">UND</button>
-        <button class="new-op-btn"        id="newOpOr"     onclick="setNewOp('OR')">ODER</button>
-        <button class="new-op-btn"        id="newOpAndNot" onclick="setNewOp('AND NOT')">UND NICHT</button>
+        <button class="new-op-btn active" id="newOpAnd"    onclick="setNewOp('AND')">AND</button>
+        <button class="new-op-btn"        id="newOpOr"     onclick="setNewOp('OR')">OR</button>
+        <button class="new-op-btn"        id="newOpAndNot" onclick="setNewOp('AND NOT')">AND NOT</button>
       </div>
 
       <div class="condition-row">
         <select id="condParam">
-          <optgroup label="Temperatur">
-            <option value="temperature_max"    data-label="Temperatur max.">Temperatur max. (°C)</option>
-            <option value="temperature_min"    data-label="Temperatur min.">Temperatur min. (°C)</option>
+          <optgroup label="Temperature">
+            <option value="temperature_max"    data-label="Temp. max.">Temperature max. (°C)</option>
+            <option value="temperature_min"    data-label="Temp. min.">Temperature min. (°C)</option>
           </optgroup>
-          <optgroup label="Niederschlag">
-            <option value="precipitation_sum"  data-label="Niederschlag">Niederschlag (mm)</option>
-            <option value="snowfall_sum"       data-label="Schneefall">Schneefall (cm)</option>
+          <optgroup label="Precipitation">
+            <option value="precipitation_sum"  data-label="Precipitation">Precipitation (mm)</option>
+            <option value="snowfall_sum"       data-label="Snowfall">Snowfall (cm)</option>
           </optgroup>
           <optgroup label="Wind">
             <option value="wind_speed_max"     data-label="Wind max.">Wind max. (km/h)</option>
-            <option value="wind_gusts_max"     data-label="Windböen max.">Windböen max. (km/h)</option>
+            <option value="wind_gusts_max"     data-label="Wind gusts max.">Wind gusts max. (km/h)</option>
           </optgroup>
-          <optgroup label="Sonne / UV">
-            <option value="sunshine_duration"  data-label="Sonnenstunden">Sonnenstunden (s/h)</option>
-            <option value="uv_index_max"       data-label="UV-Index">UV-Index</option>
+          <optgroup label="Sun / UV">
+            <option value="sunshine_duration"  data-label="Sunshine">Sunshine duration (s/h)</option>
+            <option value="uv_index_max"       data-label="UV Index">UV Index</option>
           </optgroup>
-          <optgroup label="Boden">
-            <option value="soil_temperature_0cm" data-label="Bodentemp. (0 cm)">Bodentemp. 0 cm (°C)</option>
-            <option value="soil_temperature_6cm" data-label="Bodentemp. (6 cm)">Bodentemp. 6 cm (°C)</option>
-            <option value="soil_moisture_0_1cm"  data-label="Bodenfeuchte (0–1 cm)">Bodenfeuchte 0–1 cm (m³/m³)</option>
-            <option value="soil_moisture_1_3cm"  data-label="Bodenfeuchte (1–3 cm)">Bodenfeuchte 1–3 cm (m³/m³)</option>
+          <optgroup label="Soil">
+            <option value="soil_temperature_0cm" data-label="Soil temp. (0 cm)">Soil temp. 0 cm (°C)</option>
+            <option value="soil_temperature_6cm" data-label="Soil temp. (6 cm)">Soil temp. 6 cm (°C)</option>
+            <option value="soil_moisture_0_1cm"  data-label="Soil moisture (0–1 cm)">Soil moisture 0–1 cm (m³/m³)</option>
+            <option value="soil_moisture_1_3cm"  data-label="Soil moisture (1–3 cm)">Soil moisture 1–3 cm (m³/m³)</option>
           </optgroup>
         </select>
         <select id="condComp" style="width:60px;">
@@ -549,7 +549,7 @@
         </select>
         <input type="number" id="condValue" value="0" step="any" />
       </div>
-      <button class="add-condition-btn" onclick="addCondition()">+ Bedingung hinzufügen</button>
+      <button class="add-condition-btn" onclick="addCondition()">+ Add condition</button>
 
       <!-- Chips -->
       <div class="conditions-list" id="conditionsList"></div>
@@ -557,22 +557,22 @@
 
     <!-- RIGHT: Validity -->
     <div class="builder-col">
-      <div class="col-title">03 — Zeitliche Gültigkeit</div>
+      <div class="col-title">03 — Validity Period</div>
 
       <div class="validity-tabs">
-        <button class="validity-tab active" onclick="setValidityType('date_range')" id="vtab-date_range">Zeitraum</button>
-        <button class="validity-tab" onclick="setValidityType('weekdays')" id="vtab-weekdays">Wochentage</button>
-        <button class="validity-tab" onclick="setValidityType('months')" id="vtab-months">Monate</button>
+        <button class="validity-tab active" onclick="setValidityType('date_range')" id="vtab-date_range">Date Range</button>
+        <button class="validity-tab" onclick="setValidityType('weekdays')" id="vtab-weekdays">Weekdays</button>
+        <button class="validity-tab" onclick="setValidityType('months')" id="vtab-months">Months</button>
       </div>
 
       <!-- Date range -->
       <div class="validity-panel active" id="vpanel-date_range">
         <div class="field">
-          <label>Von</label>
+          <label>From</label>
           <input type="date" id="dateFrom" />
         </div>
         <div class="field">
-          <label>Bis</label>
+          <label>To</label>
           <input type="date" id="dateTo" />
         </div>
       </div>
@@ -580,37 +580,37 @@
       <!-- Weekdays -->
       <div class="validity-panel" id="vpanel-weekdays">
         <div style="font-size:11px;color:var(--text-dim);margin-bottom:.5rem;font-family:var(--font-mono);">
-          Wochentag(e) auswählen
+          Select weekday(s)
         </div>
         <div class="day-grid">
-          <div><input type="checkbox" class="day-check" id="d0" value="0"><label class="day-label" for="d0">Mo</label></div>
-          <div><input type="checkbox" class="day-check" id="d1" value="1"><label class="day-label" for="d1">Di</label></div>
-          <div><input type="checkbox" class="day-check" id="d2" value="2"><label class="day-label" for="d2">Mi</label></div>
-          <div><input type="checkbox" class="day-check" id="d3" value="3"><label class="day-label" for="d3">Do</label></div>
-          <div><input type="checkbox" class="day-check" id="d4" value="4"><label class="day-label" for="d4">Fr</label></div>
-          <div><input type="checkbox" class="day-check" id="d5" value="5"><label class="day-label" for="d5">Sa</label></div>
-          <div><input type="checkbox" class="day-check" id="d6" value="6"><label class="day-label" for="d6">So</label></div>
+          <div><input type="checkbox" class="day-check" id="d0" value="0"><label class="day-label" for="d0">Mon</label></div>
+          <div><input type="checkbox" class="day-check" id="d1" value="1"><label class="day-label" for="d1">Tue</label></div>
+          <div><input type="checkbox" class="day-check" id="d2" value="2"><label class="day-label" for="d2">Wed</label></div>
+          <div><input type="checkbox" class="day-check" id="d3" value="3"><label class="day-label" for="d3">Thu</label></div>
+          <div><input type="checkbox" class="day-check" id="d4" value="4"><label class="day-label" for="d4">Fri</label></div>
+          <div><input type="checkbox" class="day-check" id="d5" value="5"><label class="day-label" for="d5">Sat</label></div>
+          <div><input type="checkbox" class="day-check" id="d6" value="6"><label class="day-label" for="d6">Sun</label></div>
         </div>
       </div>
 
       <!-- Months -->
       <div class="validity-panel" id="vpanel-months">
         <div style="font-size:11px;color:var(--text-dim);margin-bottom:.5rem;font-family:var(--font-mono);">
-          Monat(e) auswählen
+          Select month(s)
         </div>
         <div class="month-grid">
           <div><input type="checkbox" class="month-check" id="m1"  value="1" ><label class="month-label" for="m1" >Jan</label></div>
           <div><input type="checkbox" class="month-check" id="m2"  value="2" ><label class="month-label" for="m2" >Feb</label></div>
-          <div><input type="checkbox" class="month-check" id="m3"  value="3" ><label class="month-label" for="m3" >Mär</label></div>
+          <div><input type="checkbox" class="month-check" id="m3"  value="3" ><label class="month-label" for="m3" >Mar</label></div>
           <div><input type="checkbox" class="month-check" id="m4"  value="4" ><label class="month-label" for="m4" >Apr</label></div>
-          <div><input type="checkbox" class="month-check" id="m5"  value="5" ><label class="month-label" for="m5" >Mai</label></div>
+          <div><input type="checkbox" class="month-check" id="m5"  value="5" ><label class="month-label" for="m5" >May</label></div>
           <div><input type="checkbox" class="month-check" id="m6"  value="6" ><label class="month-label" for="m6" >Jun</label></div>
           <div><input type="checkbox" class="month-check" id="m7"  value="7" ><label class="month-label" for="m7" >Jul</label></div>
           <div><input type="checkbox" class="month-check" id="m8"  value="8" ><label class="month-label" for="m8" >Aug</label></div>
           <div><input type="checkbox" class="month-check" id="m9"  value="9" ><label class="month-label" for="m9" >Sep</label></div>
-          <div><input type="checkbox" class="month-check" id="m10" value="10"><label class="month-label" for="m10">Okt</label></div>
+          <div><input type="checkbox" class="month-check" id="m10" value="10"><label class="month-label" for="m10">Oct</label></div>
           <div><input type="checkbox" class="month-check" id="m11" value="11"><label class="month-label" for="m11">Nov</label></div>
-          <div><input type="checkbox" class="month-check" id="m12" value="12"><label class="month-label" for="m12">Dez</label></div>
+          <div><input type="checkbox" class="month-check" id="m12" value="12"><label class="month-label" for="m12">Dec</label></div>
         </div>
       </div>
     </div>
@@ -619,25 +619,25 @@
   <div id="statusMsg" class="status-msg"></div>
 
   <div class="save-bar">
-    <button class="btn-cancel" id="cancelBtn" onclick="resetForm()" style="display:none;">Abbrechen</button>
-    <button class="btn-save" onclick="openSaveModal()">Warnung speichern</button>
+    <button class="btn-cancel" id="cancelBtn" onclick="resetForm()" style="display:none;">Cancel</button>
+    <button class="btn-save" onclick="openSaveModal()">Save warning</button>
   </div>
 
   <!-- Saved warnings list -->
-  <div class="section-divider">Meine Warnungen</div>
+  <div class="section-divider">My Warnings</div>
   <div class="warnings-list" id="warningsList">
-    <div class="empty-state" id="warningsEmpty">Noch keine Warnungen gespeichert.</div>
+    <div class="empty-state" id="warningsEmpty">No warnings saved yet.</div>
   </div>
 </div><!-- /page-wrap -->
 
 <!-- Save / Name modal -->
 <div class="modal-overlay" id="saveModal">
   <div class="modal-box">
-    <div class="modal-title">Warnung benennen</div>
-    <input type="text" class="modal-input" id="warningNameInput" placeholder="z.B. Schönes Wochenende, Frostalarm …" maxlength="100" />
+    <div class="modal-title">Name your warning</div>
+    <input type="text" class="modal-input" id="warningNameInput" placeholder="e.g. Weekend sunshine, Frost alert …" maxlength="100" />
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeSaveModal()">Abbrechen</button>
-      <button class="btn-save" onclick="saveWarning()">Speichern</button>
+      <button class="btn-cancel" onclick="closeSaveModal()">Cancel</button>
+      <button class="btn-save" onclick="saveWarning()">Save</button>
     </div>
   </div>
 </div>
@@ -743,7 +743,7 @@
       stationResults.innerHTML = "";
       _focusedIdx = -1;
       if (!items.length) {
-        stationResults.innerHTML = '<div style="padding:.5rem .7rem;font-size:12px;color:var(--text-dim);">Keine Ergebnisse</div>';
+        stationResults.innerHTML = '<div style="padding:.5rem .7rem;font-size:12px;color:var(--text-dim);">No results</div>';
       } else {
         items.forEach(s => {
           const el = document.createElement("div");
@@ -828,12 +828,12 @@
       const chip = document.createElement("div");
       chip.className = "condition-chip";
       const opBtn = i > 0
-        ? `<button class="chip-op-btn" onclick="toggleChipOp(${i})" title="Verknüpfung wechseln">${c.operator || "AND"}</button>`
+        ? `<button class="chip-op-btn" onclick="toggleChipOp(${i})" title="Toggle operator">${c.operator || "AND"}</button>`
         : `<span style="width:4px;"></span>`;
       chip.innerHTML = `
         ${opBtn}
         <span class="chip-text">${c.label || c.parameter} ${c.comparator} ${c.value}</span>
-        <button class="chip-del" onclick="removeCondition(${i})" title="Entfernen">×</button>`;
+        <button class="chip-del" onclick="removeCondition(${i})" title="Remove">×</button>`;
       list.appendChild(chip);
     });
     // Show/hide the operator selector for the next condition
@@ -884,8 +884,8 @@
 
   // ── Modal ─────────────────────────────────────────────────────────────────
   function openSaveModal() {
-    if (!selectedStation) { showStatus("Bitte zuerst eine Station auswählen.", "err"); return; }
-    if (!conditions.length) { showStatus("Mindestens eine Bedingung hinzufügen.", "err"); return; }
+    if (!selectedStation) { showStatus("Please select a station first.", "err"); return; }
+    if (!conditions.length) { showStatus("Add at least one condition.", "err"); return; }
     document.getElementById("saveModal").classList.add("open");
     document.getElementById("warningNameInput").focus();
   }
@@ -924,12 +924,12 @@
       });
       if (!res.ok) throw new Error(await res.text());
       closeSaveModal();
-      showStatus(editingId ? "Warnung aktualisiert." : "Warnung gespeichert.", "ok");
+      showStatus(editingId ? "Warning updated." : "Warning saved.", "ok");
       resetForm();
       await loadWarnings();
     } catch (e) {
       closeSaveModal();
-      showStatus("Fehler beim Speichern: " + e.message, "err");
+      showStatus("Error saving: " + e.message, "err");
     }
   }
 
@@ -954,7 +954,7 @@
       renderConditions();
       setValidity(w.validity);
       document.getElementById("warningNameInput").value = w.name;
-      document.getElementById("builderTitle").textContent = `Warnung bearbeiten: ${w.name}`;
+      document.getElementById("builderTitle").textContent = `Edit warning: ${w.name}`;
       document.getElementById("cancelBtn").style.display = "";
     } catch (e) { /* silent */ }
   }
@@ -990,8 +990,8 @@
           <div class="warning-card-meta">${w.city} · ${buildValidityMeta(w.validity)}</div>
         </div>
         <div class="warning-card-actions">
-          <button class="card-btn" onclick="editWarning(${w.id})">Bearbeiten</button>
-          <button class="card-btn danger" onclick="deleteWarning(${w.id})">Löschen</button>
+          <button class="card-btn" onclick="editWarning(${w.id})">Edit</button>
+          <button class="card-btn danger" onclick="deleteWarning(${w.id})">Delete</button>
         </div>`;
       container.appendChild(card);
     });
@@ -1001,11 +1001,11 @@
     if (!v) return "—";
     if (v.type === "date_range") return `${v.date_from || "?"} → ${v.date_to || "?"}`;
     if (v.type === "weekdays") {
-      const names = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+      const names = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
       return (v.weekdays || []).map(d => names[d] || d).join(", ");
     }
     if (v.type === "months") {
-      const names = ["","Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+      const names = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
       return (v.months || []).map(m => names[m] || m).join(", ");
     }
     return "—";
@@ -1014,16 +1014,16 @@
   function editWarning(id) { window.location.href = `warnings.html?edit=${id}`; }
 
   async function deleteWarning(id) {
-    if (!confirm("Warnung wirklich löschen?")) return;
+    if (!confirm("Really delete this warning?")) return;
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API}/warnings/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status === 204) { showStatus("Warnung gelöscht.", "ok"); await loadWarnings(); }
-      else showStatus("Fehler beim Löschen.", "err");
-    } catch { showStatus("Netzwerkfehler.", "err"); }
+      if (res.status === 204) { showStatus("Warning deleted.", "ok"); await loadWarnings(); }
+      else showStatus("Error deleting.", "err");
+    } catch { showStatus("Network error.", "err"); }
   }
 
   // ── Reset ─────────────────────────────────────────────────────────────────
@@ -1044,7 +1044,7 @@
     document.getElementById("dateTo").value = "";
     document.querySelectorAll(".day-check, .month-check").forEach(el => el.checked = false);
     document.getElementById("warningNameInput").value = "";
-    document.getElementById("builderTitle").textContent = "Neue Warnung erstellen";
+    document.getElementById("builderTitle").textContent = "Create new warning";
     document.getElementById("cancelBtn").style.display = "none";
     history.replaceState(null, "", "warnings.html");
   }

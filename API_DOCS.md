@@ -352,7 +352,7 @@ POST /weather/fetch-now?city=Freiburg&lat=47.995&lon=7.849
 | Status | Beschreibung                          | Beispiel `detail`                                          |
 |--------|---------------------------------------|------------------------------------------------------------|
 | `504`  | Open-Meteo API antwortet nicht        | `"Open-Meteo API Timeout – bitte nochmal versuchen."`      |
-| `502`  | Open-Meteo gibt einen HTTP-Fehler zurück | `"Open-Meteo Fehler: 422 Client Error: ..."`            |
+| `502`  | Open-Meteo gibt    HTTP-Fehler zurück | `"Open-Meteo Fehler: 422 Client Error: ..."`               |
 | `500`  | Unerwarteter interner Fehler          | Fehlermeldung als String                                   |
 
 ---
@@ -428,7 +428,7 @@ Gibt die tägliche Wettervorhersage ab heute zurück.
 
 | Parameter | Typ       | Pflicht | Standard          | Beschreibung                             |
 |-----------|-----------|---------|-------------------|------------------------------------------|
-| `city`    | `string`  | Nein    | `DEFAULT_CITY` (env) | Stadtname                            |
+| `city`    | `string`  | Nein    |`DEFAULT_CITY`(env)| Stadtname                                |
 | `days`    | `integer` | Nein    | `4`               | Anzahl Tage. Min: `1`, Max: `7`          |
 
 **Response `200 OK`** – Array von `WeatherDailySchema`:
@@ -495,7 +495,7 @@ Gibt die stündliche Wettervorhersage ab jetzt (UTC) zurück.
 
 | Parameter | Typ       | Pflicht | Standard          | Beschreibung                              |
 |-----------|-----------|---------|-------------------|-------------------------------------------|
-| `city`    | `string`  | Nein    | `DEFAULT_CITY` (env) | Stadtname                             |
+| `city`    | `string`  | Nein    |`DEFAULT_CITY`(env)| Stadtname                                 |
 | `hours`   | `integer` | Nein    | `24`              | Anzahl Stunden. Min: `1`, Max: `168` (7 Tage) |
 
 **Response `200 OK`** – Array von `WeatherHourlySchema`:
@@ -610,7 +610,7 @@ GET /alerts?city=Freiburg&active_only=false&severity=danger
 | `alert_name`    | `string`          | Name des Alerts (z.B. `"Hitzewarnung"`)                        |
 | `severity`      | `string`          | Schweregrad: `"danger"`, `"warning"` o.ä.                      |
 | `message`       | `string`          | Menschenlesbare Warnmeldung                                    |
-| `condition_met` | `object` / `null` | JSONB-Objekt mit den ausgelösten Bedingungsdetails              |
+| `condition_met` | `object` / `null` | JSONB-Objekt mit den ausgelösten Bedingungsdetails             |
 | `forecast_date` | `string` / `null` | Prognosedatum für das der Alert gilt                           |
 | `is_active`     | `boolean`         | `true` = aktuell aktiv                                         |
 | `created_at`    | `string` / `null` | Erstellungszeitpunkt                                           |
