@@ -195,7 +195,7 @@ def _require_internal_token(x_internal_token: str = Header(default="")):
         HTTPException(403): When ``INTERNAL_API_TOKEN`` is set and the header
             value does not match.
     """
-    if not _INTERNAL_TOKEN or x_internal_token != _INTERNAL_TOKEN:
+    if _INTERNAL_TOKEN and x_internal_token != _INTERNAL_TOKEN:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 @app.post("/charts/cache-clear", tags=["Charts"])

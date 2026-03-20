@@ -294,3 +294,86 @@ Unter Triggert Alerts sollen alle aktuell vom User angelegte und getriggerten Wa
 - `backend/models.py` – Alert-Model (Timing-Felder)
 - `backend/routers/weather_fetch.py` – fetch-now Auth entfernen
 - `docker/init.sql` – DB-Schema
+
+---
+
+### Session 8 – Code Review: Security, Architecture & Best Practices (2026-03-20)
+
+**Grundlage:** Opus Code-Review-Agent hat den gesamten Codebestand analysiert.
+Dieser Session-Plan dokumentiert alle gefundenen Issues, priorisiert nach Schwere.
+
+---
+
+#### A) Critical Issues – Sofort beheben
+
+| # | Issue | Datei(en) | Beschreibung |
+|---|-------|-----------|-------------|
+| C1 | SMTP-Credentials in Git-History | `.env` | Der Brevo SMTP-Key (`xsmtpsib-...`) wurde in die Git-History committed. `.gitignore` enthält `.env` zwar bereits, aber der Key war zuvor committed und ist in der History sichtbar. **Sofort-Massnahme:** Brevo-Dashboard → Key rotieren. `.env.example` anlegen (ohne echte Werte). Optional: `git filter-branch` oder BFG Repo Cleaner um die History zu bereinigen. |
+| C2 | `/weather/fetch-now` ohne Rate-Limiting | `backend/routers/weather_fetch.py:310` | Endpoint ist unauthentifiziert (absichtlich seit Berlin-Bug-Fix). Aber ohne Rate-Limiting kann ein Angreifer: die Open-Meteo-API spammen, beliebige City-Namen in die DB schreiben, die DB mit 168 Rows pro Aufruf fluten. **Fix:** In-Memory Cooldown pro City (z.B. 5 Min) einbauen. |
+| C3 | Route-Reihenfolge Bug: `/triggered` unerreichbar | `backend/routers/warnings.py` | ✅ **erledigt** – `/triggered` vor `/{warning_id}` verschoben |
+| C4 | Falsche Spaltennamen in Triggered-Query | `backend/routers/warnings.py` | ✅ **erledigt** – `wind_speed_10m_max` → `wind_speed_max`, `wind_gusts_10m_max` → `wind_gusts_max` |
+| C5 | Invertierte Token-Logik in `_require_internal_token` | `backend/main.py:198` | ✅ **erledigt** – `if not _INTERNAL_TOKEN or` → `if _INTERNAL_TOKEN and` |
+
+---
+
+#### B) Important Improvements – Architektur & Sicherheit
+
+| # | Issue | Datei(en) | Beschreibung |
+|---|-------|-----------|-------------|
+| I1 | `main.py` aufteilen (1.275 Zeilen) | `backend/main.py` | Enthält Forecast-Endpoints, Alert-Logik, Chart-Generierung, Cache-Management und Stats in einer Datei. Vorschlag: `routers/charts.py`, `routers/forecast.py`, `routers/alerts.py`, `routers/stats.py` auslagern. `main.py` nur noch App-Setup + Router-Includes. |
+| I2 | DRY: UPSERT-SQL 4x dupliziert | `load.py`, `check_warnings.py`, `weather_fetch.py`, `transform.py` | Gleicher UPSERT-Code für `weather_daily` und `weather_hourly` existiert in 4 Dateien. Bei neuen Spalten müssen alle 4 Stellen angepasst werden → Risiko für **Silent Data Loss**. **Fix:** Gemeinsames Modul `shared/sql_templates.py` oder DB-Funktion. |
+| I3 | DRY: `WMO_CODES` 3x dupliziert | `backend/schemas.py`, `airflow/tasks/transform.py`, `test_pipeline.py` | Drei separate Kopien des gleichen Mappings. **Fix:** Zentrale Python-Datei `shared/wmo_codes.py`. |
+| I4 | `ConditionRule` ohne Enum-Validierung | `backend/schemas.py:290` | `parameter` und `comparator` sind bare `str` – ein User könnte beliebige Werte senden. **Fix:** `WeatherParameter(str, Enum)` und `Comparator(str, Enum)` definieren. Verhindert ungültige Daten in JSONB. |
+| I5 | `RegisterRequest` ohne Validierung | `backend/schemas.py:233` | Kein `EmailStr`, keine Passwort-Mindestlänge, keine Username-Einschränkung. Ein User kann sich mit `password=""` registrieren. **Fix:** `EmailStr`, `Field(min_length=8)`, Username-Pattern. |
+| I6 | XSS in `warnings.html` | `frontend/warnings.html:1002-1003` | `${w.name}` und `${w.city}` werden unescaped in `innerHTML` eingefügt (Stored XSS). `escHtml()` existiert in `index.html:202` — muss auch in `warnings.html` verwendet werden. |
+| I7 | Einzel-SQL-Inserts statt Batch | `backend/routers/weather_fetch.py:189-203` | 168 einzelne SQL-Statements pro fetch-now Aufruf (7×24 Stunden). In `load.py` wird korrekt `execute_batch` verwendet. **Fix:** Parameter sammeln, als Batch ausführen. |
+
+---
+
+#### C) Best Practice Suggestions
+
+| # | Issue | Datei(en) | Beschreibung |
+|---|-------|-----------|-------------|
+| B1 | Deprecated `declarative_base` Import | `backend/database.py:30` | `from sqlalchemy.ext.declarative import declarative_base` ist seit SQLAlchemy 2.0 deprecated. **Fix:** `from sqlalchemy.orm import DeclarativeBase` + `class Base(DeclarativeBase): pass` |
+| B2 | `sys.path.insert` in Airflow DAG | `airflow/dags/weather_dag.py:16` | Fragiler Pfad-Hack. Besser: Tasks als Python-Package installieren oder `__init__.py` mit relativen Imports. |
+| B3 | Race Condition in `chart_cache.get()` | `backend/chart_cache.py:58-67` | Staleness-Check passiert **ausserhalb** des Locks. Zwischen Lesen und Prüfen könnte ein anderer Thread die Entry überschrieben haben. **Fix:** Gesamte get-Logik in einen Lock-Block. |
+| B4 | Fehlender Backend-Healthcheck in Docker | `docker-compose.yml` | Postgres und Airflow haben Healthchecks, Backend nicht. **Fix:** `healthcheck: test: curl -f http://localhost:8000/health` |
+| B5 | Kein CSP-Header | `nginx/nginx.conf` | Security-Headers (X-Frame-Options etc.) sind vorhanden, aber Content Security Policy fehlt. Wäre zusätzlicher XSS-Schutz. |
+| B6 | Timing-sicherer Token-Vergleich | `backend/main.py:198` | `!=` für Token-Vergleich ist anfällig für Timing-Angriffe. **Fix:** `hmac.compare_digest()` verwenden (konstante Laufzeit). |
+| B7 | Typ-Hints in Airflow Tasks | `airflow/tasks/*.py` | Task-Funktionen nutzen `**context` ohne Typ-Hinweise. Seit Airflow 2.3+ gibt es `TaskInstance` als Typ. |
+
+---
+
+#### D) Vorgeschlagene Reihenfolge
+
+Die Issues sind nach Abhängigkeiten und Risiko sortiert:
+
+| Schritt | Issues | Aufwand | Beschreibung |
+|---------|--------|---------|-------------|
+| 1 | C5 | klein | Token-Logik fixen (1 Zeile) |
+| 2 | C3 + C4 | klein | Route-Reihenfolge korrigieren + Spaltennamen fixen |
+| 3 | C2 | mittel | Rate-Limiting für `/fetch-now` |
+| 4 | C1 | mittel | Brevo-Key rotieren, `.env.example` anlegen, ggf. History bereinigen |
+| 5 | I6 | klein | XSS-Fix: `escHtml()` in `warnings.html` |
+| 6 | I5 + I4 | mittel | Input-Validierung: RegisterRequest + ConditionRule Enums |
+| 7 | B1 + B3 | klein | Deprecated Import + Cache Race Condition |
+| 8 | B6 | klein | `hmac.compare_digest()` für Token |
+| 9 | I1 | gross | `main.py` in Router-Module aufteilen |
+| 10 | I2 + I3 | gross | DRY: SQL-Templates + WMO_CODES zentralisieren |
+| 11 | B4 + B5 | klein | Docker Healthcheck + CSP Header |
+| 12 | I7 | mittel | Batch-SQL in `weather_fetch.py` |
+
+---
+
+#### E) Kritische Dateien (Session 8)
+
+- `backend/main.py` – Token-Logik (C5), Chart-Router-Split (I1)
+- `backend/routers/warnings.py` – Route-Reihenfolge (C3), Spaltennamen (C4)
+- `backend/routers/weather_fetch.py` – Rate-Limiting (C2), Batch-SQL (I7)
+- `backend/schemas.py` – Enum-Validierung (I4), RegisterRequest (I5)
+- `backend/database.py` – Deprecated Import (B1)
+- `backend/chart_cache.py` – Race Condition (B3)
+- `frontend/warnings.html` – XSS-Fix (I6)
+- `docker-compose.yml` – Backend Healthcheck (B4)
+- `nginx/nginx.conf` – CSP Header (B5)
+- `.env` / `.env.example` – Credential-Rotation (C1)
