@@ -624,6 +624,7 @@ def check_warnings(**context):
             # ── Load all active warnings + user email ──────────────────────
             cur.execute("""
                 SELECT w.id, w.city, w.name, w.conditions, w.validity,
+                       w.notify_timing,
                        u.email, u.username
                 FROM   warnings w
                 JOIN   users    u ON w.user_id = u.id
@@ -647,12 +648,24 @@ def check_warnings(**context):
                     if isinstance(warning["validity"], dict)
                     else json.loads(warning["validity"])
                 )
+                notify_timing = warning.get("notify_timing") or "as_available"
 
                 for fdate in forecast_dates:
 
                     # ── Check temporal validity ────────────────────────────
                     if not is_valid(validity, fdate):
                         continue
+
+                    # ── Check notification timing ──────────────────────────
+                    # 'as_available': notify for all 7 forecast days (default)
+                    # 'Nd': only notify when forecast date is exactly N days away
+                    if notify_timing != "as_available":
+                        try:
+                            n_days = int(notify_timing.rstrip("d"))
+                            if (fdate - today).days != n_days:
+                                continue
+                        except (ValueError, AttributeError):
+                            pass  # unknown timing value → fall through (as_available)
 
                     # ── Already notified? ──────────────────────────────────
                     cur.execute("""
@@ -664,13 +677,21 @@ def check_warnings(**context):
                         continue
 
                     # ── Fetch daily forecast for city + date ───────────────
+                    # sunshine_duration is computed as total hours/day from hourly data
+                    # (weather_daily has no sunshine column; weather_hourly stores s/h)
                     cur.execute("""
-                        SELECT temperature_max, temperature_min,
-                               precipitation_sum, snowfall_sum,
-                               wind_speed_max, wind_gusts_max,
-                               uv_index_max, weather_code
-                        FROM   weather_daily
-                        WHERE  city = %s AND forecast_date = %s
+                        SELECT d.temperature_max, d.temperature_min,
+                               d.precipitation_sum, d.snowfall_sum,
+                               d.wind_speed_max, d.wind_gusts_max,
+                               d.uv_index_max, d.weather_code,
+                               COALESCE((
+                                   SELECT SUM(h.sunshine_duration) / 3600.0
+                                   FROM   weather_hourly h
+                                   WHERE  h.city = d.city
+                                     AND  DATE(h.forecast_time AT TIME ZONE 'UTC') = d.forecast_date
+                               ), 0) AS sunshine_duration
+                        FROM   weather_daily d
+                        WHERE  d.city = %s AND d.forecast_date = %s
                     """, (city, fdate))
                     record = cur.fetchone()
                     if not record:

@@ -364,11 +364,12 @@ class WarningCreate(BaseModel):
         conditions: One or more threshold rules (AND logic).
         validity: Temporal scope specification.
     """
-    station_id: Optional[int] = None
-    city:       str
-    name:       str
-    conditions: list[ConditionRule]
-    validity:   ValiditySpec
+    station_id:    Optional[int] = None
+    city:          str
+    name:          str
+    conditions:    list[ConditionRule]
+    validity:      ValiditySpec
+    notify_timing: Optional[str] = "as_available"  # 'as_available' | '1d'..'6d'
 
 
 class WarningOut(BaseModel):
@@ -390,15 +391,16 @@ class WarningOut(BaseModel):
         updated_at: UTC last-modified timestamp.
     """
     model_config = ConfigDict(from_attributes=True)
-    id:         int
-    station_id: Optional[int] = None
-    city:       str
-    name:       str
-    conditions: Any
-    validity:   Any
-    active:     bool
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    id:            int
+    station_id:    Optional[int] = None
+    city:          str
+    name:          str
+    conditions:    Any
+    validity:      Any
+    notify_timing: Optional[str] = "as_available"
+    active:        bool
+    created_at:    Optional[datetime] = None
+    updated_at:    Optional[datetime] = None
 
 
 # ── Dashboard Summary ─────────────────────────────────────────────────────────

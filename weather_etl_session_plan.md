@@ -247,15 +247,17 @@ Unter Triggert Alerts sollen alle aktuell vom User angelegte und getriggerten Wa
 
 #### A) Code-Änderungen
 
-| # | Aufgabe | Aufwand |
-|---|---------|---------|
-| 0 | Navigation: Configurator → Dashboard (nicht Landing Page) | klein |
-| 2 | Charts: Gesamte Sonnenscheindauer (Stunden) als Zahl im Barplot | mittel |
-| 3 | Configurator: Sonnenscheindauer-Einheit min/h → h/Tag | klein |
-| 3.2 | Alert speichern: Timing-Auswahl für Email-Notification (vollst. mit Logik) | groß |
-| 4 | Quick Fix: Neue Station triggert ETL nicht – Berlin-Bug (auth entfernen) | mittel |
-| 9 | Sidebar: General / My Alerts / Triggered Alerts + "not signed in" Fix | groß |
-| 11 | Terminologie Warnings vs. Alerts vereinheitlichen | mittel |
+| # | Aufgabe | Status |
+|---|---------|--------|
+| 0 | Navigation: Configurator → Dashboard (`history.back()`) | ✅ erledigt |
+| 4 | Berlin-Bug: Auth von `/weather/fetch-now` entfernt | ✅ erledigt |
+| 4b | Architektur-Fix: `_refresh_stale_cities()` in check_warnings DAG | ✅ erledigt |
+| 4c | Architektur-Fix: General Alerts dynamisch für jede Stadt | ✅ erledigt |
+| 9 | Sidebar: General / My Alerts / Triggered + "not signed in" Fix | ✅ erledigt |
+| 3 | Configurator: Sonnenscheindauer-Einheit min/h → h/Tag | ✅ erledigt |
+| 2 | Charts: Gesamte Sonnenscheindauer als Zahl im Barplot | ✅ erledigt |
+| 3.2 | Alert speichern: Timing-Auswahl für Email-Notification (vollst. mit Logik) | ✅ erledigt |
+| 11 | Terminologie Warnings vs. Alerts vereinheitlichen | ✅ erledigt |
 
 #### B) Erklärungen (erledigt in Session 7)
 
@@ -275,16 +277,13 @@ Unter Triggert Alerts sollen alle aktuell vom User angelegte und getriggerten Wa
 | 8 | Bildschirmaufnahme: Login → Warning → Alert |
 | 10 | Claude Code mit Opus auf Server – Code-Review |
 
-#### Festgelegte Reihenfolge
+#### Verbleibende Reihenfolge (nächste Session)
 
-1. Erklärungen (5 → 6 → 1.2 → 4/SYNC) ✅ erledigt
-2. Berlin-Bug Quick Fix (0 → 4)
-3. Sidebar Alerts umstrukturieren (9)
-4. Configurator Einheit (3)
-5. Sunshine Chart (2)
-6. Email Notification Timing (3.2)
-7. Terminologie (11)
-8. Präsentation .pptx bearbeiten (1)
+1. **3** – Configurator: Sunshine-Einheit h/Tag
+2. **2** – Chart: Sunshine-Stunden als Zahl im Barplot
+3. **3.2** – Email Notification Timing (vollständig mit Backend-Logik)
+4. **11** – Terminologie vereinheitlichen
+5. **1** – Präsentation (.pptx aus `/präsi` direkt bearbeiten)
 
 #### Kritische Dateien
 

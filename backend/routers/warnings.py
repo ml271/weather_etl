@@ -115,13 +115,14 @@ def create_warning(
         database ID and timestamps.
     """
     warning = Warning(
-        user_id    = current_user.id,
-        station_id = body.station_id,
-        city       = body.city,
-        name       = body.name,
+        user_id       = current_user.id,
+        station_id    = body.station_id,
+        city          = body.city,
+        name          = body.name,
         # Dump Pydantic models to plain dicts for JSONB storage
-        conditions = [c.model_dump() for c in body.conditions],
-        validity   = body.validity.model_dump(),
+        conditions    = [c.model_dump() for c in body.conditions],
+        validity      = body.validity.model_dump(),
+        notify_timing = body.notify_timing or "as_available",
     )
     db.add(warning)
     db.commit()
@@ -186,11 +187,12 @@ def update_warning(
     w = db.get(Warning, warning_id)
     if not w or w.user_id != current_user.id:
         raise HTTPException(404, "Warning not found")
-    w.station_id = body.station_id
-    w.city       = body.city
-    w.name       = body.name
-    w.conditions = [c.model_dump() for c in body.conditions]
-    w.validity   = body.validity.model_dump()
+    w.station_id    = body.station_id
+    w.city          = body.city
+    w.name          = body.name
+    w.conditions    = [c.model_dump() for c in body.conditions]
+    w.validity      = body.validity.model_dump()
+    w.notify_timing = body.notify_timing or "as_available"
     db.commit()
     db.refresh(w)
     return w

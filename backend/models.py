@@ -258,9 +258,10 @@ class Warning(Base):
     station_id  = Column(Integer, ForeignKey("stations.id", ondelete="SET NULL"), nullable=True)
     city        = Column(String(100), nullable=False)
     name        = Column(String(100), nullable=False)
-    conditions  = Column(JSONB, nullable=False)
-    validity    = Column(JSONB, nullable=False)
-    active      = Column(Boolean, default=True)
+    conditions    = Column(JSONB, nullable=False)
+    validity      = Column(JSONB, nullable=False)
+    notify_timing = Column(String(15), default="as_available")
+    active        = Column(Boolean, default=True)
     created_at  = Column(DateTime(timezone=True), server_default=func.now())
     updated_at  = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

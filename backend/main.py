@@ -839,6 +839,13 @@ def get_day_detail_plot(
     ax6.set_ylim(0, 65)  # max is 60 min/h; cap at 65 to prevent bars from touching the top spine
     style_ax(ax6, "Sunshine\n[min/h]", SUN_C)
     ax6.set_xlabel("Zeit  (UTC+1 / CET)", color=DIM, fontsize=7.5)
+    # Annotate total daily sunshine hours in the center of the panel
+    total_sun_h = sum(sunshine) / 3600.0
+    if times:
+        mid_x = times[len(times) // 2]
+        ax6.text(mid_x, 50, f"{total_sun_h:.1f} h", color=SUN_C, fontsize=9, fontweight="bold",
+                 ha="center", va="center",
+                 bbox=dict(boxstyle="round,pad=0.25", facecolor="#080c12", alpha=0.75, edgecolor="none"))
 
     axes[0].set_xlim(times[0], times[-1])
     fig.patch.set_facecolor(BG)
@@ -1194,6 +1201,17 @@ def get_hourly_plot(
     ax6.spines["top"].set_visible(False)
     # Day labels are carried by ax8 (the bottom-most panel) — suppress them here
     ax6.tick_params(axis="x", labelbottom=False)
+    # Annotate total sunshine hours per calendar day
+    from collections import defaultdict
+    _sun_by_day = defaultdict(float)
+    for _t, _s in zip(times, sunshine):
+        _sun_by_day[_t.date()] += _s
+    for _day, _total_s in _sun_by_day.items():
+        _noon = datetime(_day.year, _day.month, _day.day, 12, 0, 0)
+        if times[0] <= _noon <= times[-1]:
+            ax6.text(_noon, 50, f"{_total_s / 3600:.1f}h", color=SUN_C, fontsize=8, fontweight="bold",
+                     ha="center", va="center",
+                     bbox=dict(boxstyle="round,pad=0.2", facecolor="#080c12", alpha=0.75, edgecolor="none"))
 
     # ── Panel 7: Soil Temperature ─────────────────────────
     # Check whether any non-NaN soil data is present (may be absent before

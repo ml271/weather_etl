@@ -200,6 +200,7 @@ CREATE TABLE IF NOT EXISTS warnings (
     name        VARCHAR(100) NOT NULL,
     conditions  JSONB NOT NULL,   -- [{parameter, comparator, value, label}]
     validity    JSONB NOT NULL,   -- {type: "date_range"|"weekdays"|"months", ...}
+    notify_timing VARCHAR(15) DEFAULT 'as_available', -- 'as_available'|'1d'...'6d'
     active      BOOLEAN DEFAULT TRUE,
     created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
